@@ -438,7 +438,25 @@ function tickItem(itemId) {
   }
 }
 
+const TICK_COPY = ['Sorted', 'Got it', 'In the trolley', 'Grabbed', 'Picked up'];
+let lastTickIdx = -1;
+function showTickToast() {
+  const total = state.list.length;
+  const willBeDone = state.list.filter(x => !x.ticked).length; // one is about to be ticked
+  if (willBeDone <= 1) return; // last item — confetti + "nice work" handles this
+  if (total > 3 && willBeDone === Math.ceil(total / 2)) {
+    toast('Halfway through the list', 1600);
+    return;
+  }
+  let idx;
+  do { idx = Math.floor(Math.random() * TICK_COPY.length); }
+  while (idx === lastTickIdx && TICK_COPY.length > 1);
+  lastTickIdx = idx;
+  toast(TICK_COPY[idx], 1100);
+}
+
 function celebrateAllDone() {
+  toast('Nice work, you two', 2200);
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const appEl = document.getElementById('app');
   if (!appEl) return;
@@ -1486,7 +1504,20 @@ function handleAction(action, el, ev) {
     case 'scroll-to-today':   scrollToToday(); break;
     case 'tick': {
       ev?.stopPropagation();
-      tickItem(el.dataset.itemId); render(); break;
+      const tickId = el.dataset.itemId;
+      const tickedItem = state.list.find(x => x.id === tickId);
+      if (!tickedItem) break;
+      if (!tickedItem.ticked) {
+        // Ticking on: animate first, commit after
+        const card = document.querySelector(`.card[data-item-id="${tickId}"]`);
+        if (card) card.classList.add('popping');
+        showTickToast();
+        setTimeout(() => { tickItem(tickId); render(); }, 160);
+      } else {
+        // Ticking off: immediate, no fanfare
+        tickItem(tickId); render();
+      }
+      break;
     }
     case 'clear-trolley': {
       const n = state.list.filter(i => i.ticked).length;

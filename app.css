@@ -1391,6 +1391,7 @@ div.lib-card:active { transform: scale(0.995); transition: transform 0.1s; }
 /* Keyframes defined unconditionally so @media only controls usage */
 @keyframes screenIn     { from{opacity:0;transform:translateY(5px)}  to{opacity:1;transform:translateY(0)} }
 @keyframes checkPop     { 0%{transform:scale(.5)} 55%{transform:scale(1.22)} 100%{transform:scale(1)} }
+@keyframes cardCollect  { 0%{background:var(--card)} 35%{background:var(--sage-soft)} 100%{background:var(--card)} }
 @keyframes checkDraw    { from{stroke-dashoffset:15} to{stroke-dashoffset:0} }
 @keyframes ingPop       { 0%{transform:scale(.65)} 55%{transform:scale(1.2)} 100%{transform:scale(1)} }
 @keyframes todayGlow    { 0%,100%{box-shadow:0 0 0 1.5px var(--terra),0 4px 14px rgba(60,40,20,.05)} 50%{box-shadow:0 0 0 2.5px var(--terra),0 6px 22px rgba(201,125,93,.18)} }
@@ -1406,6 +1407,9 @@ div.lib-card:active { transform: scale(0.995); transition: transform 0.1s; }
   /* Tick pop + checkmark draw */
   .card.done .check             { animation: checkPop 0.28s cubic-bezier(0.2,.8,.2,1) both; }
   .card.done .check svg         { opacity: 1; animation: checkDraw 0.22s ease-out 0.07s both; }
+  .card.popping                 { animation: cardCollect 0.16s ease-out both; }
+  .card.popping .check          { animation: checkPop 0.22s cubic-bezier(0.34,1.56,0.64,1) both; }
+  .card.popping .check svg      { opacity: 1; animation: checkDraw 0.18s ease-out 0.04s both; }
 
   /* Ingredient pick */
   .ing-row.picked .ck           { animation: ingPop 0.25s cubic-bezier(0.2,.8,.2,1) both; }
