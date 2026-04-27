@@ -181,6 +181,8 @@ input, textarea { font: inherit; -webkit-appearance: none; }
 .thumb.cream { background: linear-gradient(135deg,#FFF6E2,#F0E1BC); }
 .thumb.rose  { background: linear-gradient(135deg,#FFE1DA,#F2C2B6); }
 .thumb.terra { background: linear-gradient(135deg,#E8C9A8,#C97D5D); color: #fff; }
+.thumb.has-img { background: #fff; border: 1px solid var(--line); padding: 3px; }
+.thumb.has-img img { width: 100%; height: 100%; object-fit: contain; display: block; }
 
 .body { flex: 1; min-width: 0; }
 .body .name {

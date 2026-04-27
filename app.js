@@ -259,6 +259,54 @@ function thumbColor(id) {
 function host(url) {
   try { return new URL(url).hostname.replace(/^www\./,''); } catch { return ''; }
 }
+
+// ---------- Product image lookup (Woolworths API) ----------
+const IMG_CACHE_KEY = 'productImgCache';
+function imgCacheGet(name) {
+  try {
+    const c = JSON.parse(localStorage.getItem(IMG_CACHE_KEY) || '{}');
+    const key = name.toLowerCase();
+    return key in c ? c[key] : undefined; // undefined = uncached; null = searched, not found
+  } catch { return undefined; }
+}
+function imgCacheSet(name, url) {
+  try {
+    const c = JSON.parse(localStorage.getItem(IMG_CACHE_KEY) || '{}');
+    c[name.toLowerCase()] = url;
+    localStorage.setItem(IMG_CACHE_KEY, JSON.stringify(c));
+  } catch {}
+}
+async function fetchProductImage(name) {
+  const cached = imgCacheGet(name);
+  if (cached !== undefined) return cached;
+  try {
+    const r = await fetch(
+      `https://www.woolworths.com.au/apis/ui/Search/products?searchTerm=${encodeURIComponent(name)}&pageSize=1&sortType=TraderRelevance`,
+      { headers: { Accept: 'application/json' } }
+    );
+    if (!r.ok) throw 0;
+    const d = await r.json();
+    const imgUrl = d?.Products?.[0]?.Products?.[0]?.MediumImageFile || null;
+    imgCacheSet(name, imgUrl);
+    return imgUrl;
+  } catch {
+    imgCacheSet(name, null);
+    return null;
+  }
+}
+async function loadShoppingImages() {
+  const thumbs = document.querySelectorAll('#shopList .thumb[data-product-id]:not(.has-img)');
+  for (const thumb of thumbs) {
+    const product = state.products.find(p => p.id === thumb.dataset.productId);
+    if (!product) continue;
+    const imgUrl = await fetchProductImage(product.name);
+    if (!document.contains(thumb)) continue; // re-rendered while we were fetching
+    if (!imgUrl) continue;
+    thumb.classList.add('has-img');
+    thumb.innerHTML = `<img src="${escapeHTML(imgUrl)}" alt="">`;
+    await new Promise(r => setTimeout(r, 40)); // gentle rate limit
+  }
+}
 function storeLabel(s) {
   return { coles:'Coles', woolies:'Woolies', aldi:'Aldi' }[s] || '';
 }
@@ -520,7 +568,7 @@ function renderShopping() {
     const meta = `${qtyPrefix}${escapeHTML(product.package)}${storeSpan ? ' · ' + storeSpan : ''}`;
     return `
       <div class="card${item.ticked ? ' done' : ''}" data-item-id="${item.id}">
-        <div class="thumb ${thumbColor(product.id)}">${product.emoji}</div>
+        <div class="thumb ${thumbColor(product.id)}" data-product-id="${product.id}">${product.emoji}</div>
         <div class="body">
           <div class="name">${escapeHTML(product.name)}</div>
           <div class="meta">${meta}${stale}</div>
@@ -565,6 +613,7 @@ function renderShopping() {
   }
 
   list.innerHTML = html;
+  loadShoppingImages();
 }
 
 // ---------- Render: meal planner (multi-week) ----------
