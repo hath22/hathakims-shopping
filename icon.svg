@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="#C97D5D"/>
+
+  <!-- Bowl body -->
+  <path d="M 110 218 Q 88 378 256 396 Q 424 378 402 218 Z" fill="#FBF6EE" opacity="0.95"/>
+
+  <!-- Bowl rim -->
+  <rect x="90" y="200" width="332" height="36" rx="18" fill="#FBF6EE"/>
+
+  <!-- Steam wisps -->
+  <path d="M 190 172 Q 175 148 190 124 Q 205 100 190 76" fill="none" stroke="#FBF6EE" stroke-width="14" stroke-linecap="round" opacity="0.7"/>
+  <path d="M 256 162 Q 241 138 256 114 Q 271 90 256 66"   fill="none" stroke="#FBF6EE" stroke-width="14" stroke-linecap="round" opacity="0.7"/>
+  <path d="M 322 172 Q 307 148 322 124 Q 337 100 322 76"  fill="none" stroke="#FBF6EE" stroke-width="14" stroke-linecap="round" opacity="0.7"/>
+</svg>
