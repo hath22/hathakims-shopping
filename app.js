@@ -1510,9 +1510,9 @@ function handleAction(action, el, ev) {
       if (!tickedItem.ticked) {
         // Ticking on: animate first, commit after
         const card = document.querySelector(`.card[data-item-id="${tickId}"]`);
-        if (card) card.classList.add('popping');
+        if (card) requestAnimationFrame(() => card.classList.add('popping'));
         showTickToast();
-        setTimeout(() => { tickItem(tickId); render(); }, 160);
+        setTimeout(() => { tickItem(tickId); render(); }, 260);
       } else {
         // Ticking off: immediate, no fanfare
         tickItem(tickId); render();
