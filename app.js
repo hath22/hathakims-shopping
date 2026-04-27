@@ -542,7 +542,6 @@ function renderShopping() {
   $('#shopTitle').textContent = 'Shopping list';
   $('#shopSub').textContent = total ? `· ${total} items · ${done} done` : '· nothing on the list';
 
-  $('#shopAvatars').innerHTML = state.household.members.map(m => `<span>${escapeHTML(m.initial)}</span>`).join('');
 
   const banner = $('#offlineBanner');
   if (state.prefs.demoOffline) {
@@ -608,14 +607,14 @@ function renderShopping() {
   const cats = Object.keys(groups).sort((a,b) => order.indexOf(a) - order.indexOf(b));
 
   let html = cats.map(cat => `
-    <div class="section-title"><span>${cat}</span><span>${groups[cat].length}</span></div>
+    <div class="section-title"><span>${cat}</span></div>
     ${groups[cat].map(rowHtml).join('')}
   `).join('');
 
   if (ticked.length) {
     html += `
       <div class="section-title trolley-head">
-        <span>In the trolley · ${ticked.length}</span>
+        <span>In the trolley</span>
         <button class="clear-btn" data-action="clear-trolley">Clear picked items</button>
       </div>
       ${ticked.map(rowHtml).join('')}`;
@@ -663,9 +662,6 @@ function renderMeals() {
     if (entry.eatingOut) {
       return `<button class="day-row eating-out${isToday ? ' today' : ''}" data-action="open-day" data-day="${key}">
         ${dateCap}
-        <div class="meal-thumb eating-out-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
-        </div>
         <div class="meal-info">
           <div class="meal-name">Eating out</div>
           <div class="meal-meta">${escapeHTML(entry.eatingOutNote || 'Tap to add details')}</div>
@@ -692,7 +688,6 @@ function renderMeals() {
     const meta = bits.join(' · ') || ' ';
     return `<button class="day-row${isToday ? ' today' : ''}" data-action="open-day" data-day="${key}">
       ${dateCap}
-      <div class="meal-thumb ${thumbColor(meal.id)}">${mealInitial(meal.name)}</div>
       <div class="meal-info">
         <div class="meal-name">${escapeHTML(meal.name)}</div>
         <div class="meal-meta">${escapeHTML(meta)}</div>

@@ -22,9 +22,9 @@
   --error-mid: #8a5a3a;
   --error-edge: #F5C8B5;
   --danger: #B14B33;
-  --eating-out-bg: #EAF2EA;
-  --eating-out-border: #b5d4b7;
-  --eating-out-text: #3d6b41;
+  --eating-out-bg: #EDE3CE;
+  --eating-out-border: #C8B08A;
+  --eating-out-text: #7A5C3A;
   --bendigo-bg: #FFF1E2;
   --bendigo-text: #9B5E3A;
 
@@ -270,7 +270,7 @@ input, textarea { font: inherit; -webkit-appearance: none; }
   bottom: 60px;
   max-width: 480px; margin: 0 auto;
   padding: 14px 20px calc(14px + var(--safe-bot));
-  background: linear-gradient(to top, var(--paper) 70%, rgba(251,246,238,0));
+  background: transparent;
   pointer-events: none;
   z-index: 15;
 }
@@ -633,7 +633,7 @@ input, textarea { font: inherit; -webkit-appearance: none; }
   font-size: 12.5px; color: var(--mute); margin-top: 2px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.day-row.eating-out .meal-meta { color: var(--sage); }
+.day-row.eating-out .meal-meta { color: var(--eating-out-text); }
 .day-row .chev { color: var(--mute-2); font-size: 18px; }
 .day-row .empty-add {
   flex: 1; font-size: 12.5px; font-weight: 500; color: var(--mute);
@@ -729,14 +729,14 @@ input, textarea { font: inherit; -webkit-appearance: none; }
 .eating-out-option .eo-icon svg { width: 20px; height: 20px; }
 .eating-out-option .eo-body { flex: 1; min-width: 0; }
 .eating-out-option .eo-name { font-weight: 600; font-size: 14px; color: var(--eating-out-text); }
-.eating-out-option .eo-sub { font-size: 12.5px; color: var(--sage); margin-top: 2px; }
+.eating-out-option .eo-sub { font-size: 12.5px; color: var(--eating-out-text); margin-top: 2px; }
 .eating-out-option .eo-check {
   width: 22px; height: 22px; border-radius: 50%;
   border: 1.5px solid var(--eating-out-border); background: #fff; flex: 0 0 auto;
   display: flex; align-items: center; justify-content: center;
   color: #fff;
 }
-.eating-out-option.selected .eo-check { background: var(--sage); border-color: var(--sage); }
+.eating-out-option.selected .eo-check { background: var(--eating-out-text); border-color: var(--eating-out-text); }
 .eating-out-option.selected .eo-check::after {
   content: ""; display: block;
   width: 8px; height: 5px;
