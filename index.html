@@ -103,14 +103,13 @@
 
   <!-- ========== MEAL DETAIL ========== -->
   <section class="screen" data-screen="meal-detail">
-    <div class="recipe-hero" id="mealHero">
+    <div class="recipe-topbar">
       <button class="recipe-back" data-action="back">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
       <button class="recipe-fav" id="mealFavBtn" aria-label="Toggle frequent">
         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>
       </button>
-      <span id="mealHeroEmoji">🍝</span>
     </div>
 
     <h2 class="recipe-title" id="mealTitle"></h2>
@@ -124,10 +123,8 @@
     </div>
     <div id="mealIngredients"></div>
 
-    <div style="height: 8px;"></div>
-    <button class="btn ghost" data-action="edit-meal" style="margin-bottom: 8px;">Edit meal</button>
-
     <div class="fab-bar">
+      <button class="btn ghost" data-action="edit-meal">Edit meal</button>
       <button class="btn terra" id="addToListBtn" data-action="add-ings-to-list">Add to shopping list</button>
     </div>
   </section>
@@ -355,7 +352,10 @@
 <div class="sheet" id="daySheet">
   <div class="sheet-head">
     <div class="grabber"></div>
-    <h3 id="daySheetTitle">Monday, 7 April</h3>
+    <div class="sheet-head-row">
+      <h3 id="daySheetTitle">Monday, 7 April</h3>
+      <button class="sheet-close" data-action="close-day-sheet" aria-label="Close">✕</button>
+    </div>
     <div class="toggle-row day-sheet-toggle" id="dayBendigoRow">
       <div>
         <div class="tt">Bendigo day</div>

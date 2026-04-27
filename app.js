@@ -753,7 +753,6 @@ function renderLibrary() {
     tags.push(`<span class="ltag last-made">${escapeHTML(lastMadeLabel(m.lastMadeDate))}</span>`);
     if (host(m.recipeUrl)) tags.push(`<span class="ltag">${escapeHTML(host(m.recipeUrl))}</span>`);
     return `<div class="lib-card" role="button" tabindex="0" data-action="open-meal" data-meal-id="${m.id}">
-      <div class="lt ${thumbColor(m.id)}">${mealInitial(m.name)}</div>
       <div class="body">
         <div class="lname">${escapeHTML(m.name)}</div>
         <div class="lmeta">${m.ingredients.length} ingredients${m.timeMin?` · ${m.timeMin} min`:''}</div>
@@ -771,8 +770,6 @@ function renderMealDetail() {
   const m = state.meals.find(x => x.id === ui.activeMealId);
   if (!m) { back(); return; }
 
-  $('#mealHero').style.background = `linear-gradient(135deg, var(--terra-soft), var(--terra))`;
-  $('#mealHeroEmoji').textContent = m.emoji;
   $('#mealTitle').textContent = m.name;
 
   const meta = [];
@@ -1225,7 +1222,6 @@ function renderDaySheetBody() {
     const isSel = !entry.eatingOut && entry.mealId === m.id;
     html += `
       <div class="day-meal-option${isSel ? ' selected' : ''}" data-action="day-pick-meal" data-meal-id="${m.id}">
-        <div class="dm-thumb ${thumbColor(m.id)}">${mealInitial(m.name)}</div>
         <div class="dm-body">
           <div class="dm-name">${escapeHTML(m.name)}</div>
           <div class="dm-meta">${m.timeMin ? m.timeMin + ' min' : ''}${m.timeMin && host(m.recipeUrl) ? ' · ' : ''}${host(m.recipeUrl) ? escapeHTML(host(m.recipeUrl)) : ''}</div>
@@ -1239,11 +1235,6 @@ function renderDaySheetBody() {
     html += `<button class="day-clear-btn" data-action="day-clear">Clear this day</button>`;
   }
 
-  // View meal detail button if a meal is selected
-  if (entry.mealId && !entry.eatingOut) {
-    html += `<div style="height:10px;"></div>
-      <button class="btn ghost" data-action="day-view-meal" style="margin-bottom:8px;">View meal →</button>`;
-  }
 
   $('#daySheetBody').innerHTML = html;
 
@@ -1573,6 +1564,7 @@ function handleAction(action, el, ev) {
       showScreen('meal-detail');
       break;
     }
+    case 'close-day-sheet': closeDaySheet(); break;
     case 'edit-meal':
       startMealForm(ui.activeMealId); break;
     case 'edit-meal-quick': {
