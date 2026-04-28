@@ -849,8 +849,8 @@ input, textarea { font: inherit; -webkit-appearance: none; }
   display: flex; align-items: center; justify-content: center;
   color: var(--ink); border: 0; flex: 0 0 auto;
 }
+.recipe-back svg, .recipe-fav svg, .recipe-delete svg { width: 18px; height: 18px; }
 .recipe-fav { color: var(--terra); }
-.recipe-fav svg { width: 18px; height: 18px; }
 .recipe-delete { color: var(--mute); }
 .recipe-delete svg { width: 17px; height: 17px; }
 .recipe-delete:active { background: var(--error-bg); color: var(--danger); }
