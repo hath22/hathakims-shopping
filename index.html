@@ -117,9 +117,14 @@
       <button class="recipe-back" data-action="back">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
-      <button class="recipe-fav" id="mealFavBtn" aria-label="Toggle frequent">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>
-      </button>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button class="recipe-delete" id="mealDeleteBtn" aria-label="Delete meal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
+        <button class="recipe-fav" id="mealFavBtn" aria-label="Toggle frequent">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg>
+        </button>
+      </div>
     </div>
 
     <h2 class="recipe-title" id="mealTitle"></h2>
@@ -289,11 +294,11 @@
   <div class="sheet-head">
     <div class="grabber"></div>
     <h3>Add to list</h3>
-    <div class="hint">Paste a product link, pick a past one, or quick add.</div>
+    <div class="hint">Pick a past item, paste a product link, or quick add.</div>
 
     <div class="seg" id="addTabs">
-      <button class="on" data-mode="url">Paste a URL</button>
-      <button data-mode="past">Past items</button>
+      <button class="on" data-mode="past">Past items</button>
+      <button data-mode="url">Paste a URL</button>
       <button data-mode="quick">Quick add</button>
     </div>
   </div>
@@ -301,7 +306,7 @@
   <div class="sheet-body">
 
     <!-- URL pane -->
-    <div class="add-pane" data-pane="url">
+    <div class="add-pane hidden" data-pane="url">
       <div class="store-chips">
         <span class="chip coles">Coles</span>
         <span class="chip woolies">Woolworths</span>
@@ -322,7 +327,7 @@
     </div>
 
     <!-- Past pane -->
-    <div class="add-pane hidden" data-pane="past">
+    <div class="add-pane" data-pane="past">
       <div class="input-row">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
         <div class="v">

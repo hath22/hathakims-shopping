@@ -105,7 +105,7 @@ const ui = {
   daySheetOpen:      false,
   priceSheetOpen:    false,
   confirmSheetOpen:  false,
-  addMode:           'url',
+  addMode:           'past',
   urlScraping:       false,
   urlScraped:        null,
   urlError:          null,
@@ -862,7 +862,7 @@ function openAdd() {
   $('#quickName').value = ''; $('#quickQty').value = '1'; $('#quickNote').value = '';
   $('#urlStatus').innerHTML = ''; $('#urlPreview').innerHTML = '';
   $('#urlAddBtn').classList.add('hidden');
-  setAddMode('url');
+  setAddMode('past');
   $('#scrim').classList.add('open');
   $('#addSheet').classList.add('open');
   renderPastList();
@@ -1141,6 +1141,19 @@ function bind() {
   $('#formEmoji').addEventListener('click', cycleFormEmoji);
   $('#formFrequent').addEventListener('click', () => { ui.formDraft && (ui.formDraft.frequent = !ui.formDraft.frequent); $('#formFrequent').classList.toggle('off'); });
   $('#deleteMealBtn').addEventListener('click', deleteMeal);
+  $('#mealDeleteBtn').addEventListener('click', () => {
+    const m = state.meals.find(x => x.id === ui.activeMealId);
+    if (!m) return;
+    openConfirmSheet(`Delete "${m.name}"?`, 'It will also be removed from your meal planner.', 'Delete meal', true, () => {
+      Object.keys(state.week).forEach(k => {
+        if (state.week[k]?.mealId === m.id) setDayEntry(k, { mealId: null });
+      });
+      state.meals = state.meals.filter(x => x.id !== m.id);
+      sb.from('meals').delete().eq('id', m.id);
+      toast('Meal deleted');
+      back();
+    });
+  });
   $('#mealFavBtn').addEventListener('click', () => {
     const m = state.meals.find(x => x.id === ui.activeMealId);
     if (!m) return;

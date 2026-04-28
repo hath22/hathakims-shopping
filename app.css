@@ -843,7 +843,7 @@ input, textarea { font: inherit; -webkit-appearance: none; }
   display: flex; align-items: center; justify-content: space-between;
   padding: calc(var(--safe-top) + 8px) 0 16px;
 }
-.recipe-back, .recipe-fav {
+.recipe-back, .recipe-fav, .recipe-delete {
   width: 36px; height: 36px; border-radius: 50%;
   background: var(--paper-2);
   display: flex; align-items: center; justify-content: center;
@@ -851,6 +851,9 @@ input, textarea { font: inherit; -webkit-appearance: none; }
 }
 .recipe-fav { color: var(--terra); }
 .recipe-fav svg { width: 18px; height: 18px; }
+.recipe-delete { color: var(--mute); }
+.recipe-delete svg { width: 17px; height: 17px; }
+.recipe-delete:active { background: var(--error-bg); color: var(--danger); }
 
 /* Sheet head row with title + close */
 .sheet-head-row {
