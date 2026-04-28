@@ -1355,30 +1355,41 @@ async function onSignedIn(session) {
 }
 
 // ---------- Boot ----------
+function hideOverlay() {
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) { overlay.style.opacity = '0'; setTimeout(() => overlay.remove(), 350); }
+}
+
 async function boot() {
   bind();
-  // Listen for auth state changes (handles magic link callback too)
+
+  // Safety net: if nothing resolves within 8s, bail to sign-in
+  const safetyTimer = setTimeout(() => {
+    hideOverlay();
+    if (!ui.currentScreen) showScreen('signin', false);
+  }, 8000);
+
   sb.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN' && session) {
-      await onSignedIn(session);
+    if (event === 'INITIAL_SESSION') {
+      // Fires once on load with the stored session (or null)
+      clearTimeout(safetyTimer);
+      try {
+        if (session) await onSignedIn(session);
+        else showScreen('signin', false);
+      } catch {
+        showScreen('signin', false);
+      } finally {
+        hideOverlay();
+      }
+    } else if (event === 'SIGNED_IN' && !householdId) {
+      // Magic link callback — only if not already signed in
+      try { await onSignedIn(session); } catch { showScreen('signin', false); }
     } else if (event === 'SIGNED_OUT') {
       householdId = null; currentUser = null;
       if (realtimeSub) { realtimeSub.unsubscribe(); realtimeSub = null; }
       showScreen('signin', false);
     }
   });
-
-  // Check for existing session
-  const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    await onSignedIn(session);
-  } else {
-    showScreen('signin', false);
-  }
-
-  // Hide loading overlay
-  const overlay = document.getElementById('loadingOverlay');
-  if (overlay) { overlay.style.opacity = '0'; setTimeout(() => overlay.remove(), 300); }
 }
 
 boot();
