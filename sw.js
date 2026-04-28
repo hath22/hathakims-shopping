@@ -1,4 +1,4 @@
-const CACHE = 'hathakim-v8';
+const CACHE = 'hathakim-v9';
 const ASSETS = [
   './',
   './index.html',
@@ -12,8 +12,11 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
+  // allSettled so a single failed download doesn't block the whole install
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(ASSETS))
+    caches.open(CACHE).then(c =>
+      Promise.allSettled(ASSETS.map(url => c.add(url)))
+    )
   );
   self.skipWaiting();
 });

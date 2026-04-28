@@ -1363,29 +1363,28 @@ function hideOverlay() {
   if (overlay) { overlay.style.opacity = '0'; setTimeout(() => overlay.remove(), 350); }
 }
 
-async function boot() {
-  bind();
+function boot() {
+  try { bind(); } catch (e) { console.error('bind failed', e); }
 
-  // Hard fallback: always escape the loading screen within 8s
+  // Absolute worst-case escape hatch — 4s and we show something
   setTimeout(() => {
     hideOverlay();
     if (!ui.currentScreen) showScreen('signin', false);
-  }, 8000);
+  }, 4000);
 
-  sb.auth.onAuthStateChange(async (event, session) => {
+  sb.auth.onAuthStateChange((event, session) => {
     if (event === 'INITIAL_SESSION') {
-      // Fires once on load with the stored session (or null) — no network needed
-      try {
-        if (session) await onSignedIn(session);
-        else showScreen('signin', false);
-      } catch {
+      // Reads from localStorage — instant, no network needed.
+      // Hide overlay immediately; onSignedIn loads data in the background.
+      hideOverlay();
+      if (session) {
+        onSignedIn(session).catch(() => showScreen('signin', false));
+      } else {
         showScreen('signin', false);
-      } finally {
-        hideOverlay();
       }
     } else if (event === 'SIGNED_IN' && !householdId) {
-      // Magic link callback — only fires if not already signed in
-      try { await onSignedIn(session); } catch { showScreen('signin', false); }
+      // Magic link callback — only if not already signed in
+      onSignedIn(session).catch(() => showScreen('signin', false));
     } else if (event === 'SIGNED_OUT') {
       householdId = null; currentUser = null;
       if (realtimeSub) { realtimeSub.unsubscribe(); realtimeSub = null; }
