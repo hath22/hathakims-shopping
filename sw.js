@@ -1,9 +1,10 @@
-const CACHE = 'hathakim-v7';
+const CACHE = 'hathakim-v8';
 const ASSETS = [
   './',
   './index.html',
   './app.css',
   './app.js',
+  './supabase.min.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
