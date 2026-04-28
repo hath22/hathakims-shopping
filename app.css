@@ -315,7 +315,6 @@ input, textarea { font: inherit; -webkit-appearance: none; }
   background: var(--paper);
   border-top-left-radius: 28px; border-top-right-radius: 28px;
   z-index: 30;
-  box-shadow: 0 -10px 30px rgba(40,30,20,.12);
   transform: translateY(100%);
   transition: transform .3s cubic-bezier(.2,.8,.2,1);
   height: 85vh;
