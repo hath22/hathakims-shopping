@@ -10,7 +10,7 @@
 const SUPABASE_URL = 'https://cviqjcdhnsvcdodxmddo.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_cDpGQ4EIHU_2q-BftQQOXA_X1JPCp32';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true },
+  auth: { persistSession: true, autoRefreshToken: true, flowType: 'implicit' },
 });
 
 // ---------- Module-level auth state ----------
