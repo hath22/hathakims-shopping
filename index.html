@@ -32,11 +32,21 @@
         <p class="blurb">Plan the week, walk the aisles, tick things off — together, in real time.</p>
       </div>
 
-      <button class="apple-btn" id="signinBtn">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.365 1.43c0 1.14-.45 2.21-1.18 2.97-.78.84-2.04 1.49-3.07 1.41-.13-1.13.43-2.32 1.13-3.06.78-.83 2.13-1.45 3.12-1.32zM20.5 17.27c-.43.99-.94 1.96-1.62 2.83-1.04 1.34-2.5 2.99-4.32 3-1.62.02-2.04-1.03-4.24-1.02-2.2.01-2.66 1.04-4.28 1.02-1.82-.02-3.21-1.51-4.25-2.85-2.92-3.78-3.23-8.21-1.43-10.57 1.27-1.67 3.27-2.66 5.15-2.66 1.92 0 3.13 1.04 4.72 1.04 1.55 0 2.49-1.05 4.72-1.05 1.69 0 3.48.92 4.74 2.51-4.16 2.27-3.49 8.21.81 7.75z"/></svg>
-        Continue with Apple
-      </button>
-      <p class="signin-fine">Stays signed in. Demo mode — no real Apple account needed.</p>
+      <div id="signinForm">
+        <div class="email-field">
+          <label class="email-lbl" for="signinEmail">Email address</label>
+          <input id="signinEmail" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" />
+        </div>
+        <button class="magic-btn" id="signinBtn">Send sign-in link</button>
+        <p class="signin-fine">We'll email you a link — no password needed. Stays signed in for weeks.</p>
+      </div>
+
+      <div id="signinSent" class="hidden">
+        <div class="sent-icon">✉️</div>
+        <p class="sent-title">Check your email</p>
+        <p class="sent-body">We sent a sign-in link to <strong id="signinSentEmail"></strong>. Tap the link on this device to continue.</p>
+        <button class="signin-resend" id="signinResend">Resend link</button>
+      </div>
     </div>
   </section>
 
@@ -212,8 +222,8 @@
           <span class="signed-as"><span class="av" id="settingsInitial">L</span><span id="settingsName">Leigh Hathaway</span></span>
         </div>
         <div class="settings-row">
-          <span class="lbl">Apple ID</span>
-          <span class="val">leigh@…ladoo.com.au</span>
+          <span class="lbl">Email</span>
+          <span class="val" id="settingsEmail"></span>
         </div>
         <button class="settings-row" data-action="signout">
           <span class="val danger">Sign out</span>
@@ -237,13 +247,6 @@
           <div><div class="lbl">Notify when partner adds</div></div>
           <button class="toggle off" data-pref="notifyOnAdd" aria-label="Notify toggle"></button>
         </div>
-        <div class="settings-row">
-          <div>
-            <div class="lbl">Demo offline mode</div>
-            <div class="ts" style="font-size:11.5px;color:var(--mute);margin-top:2px;">Shows the offline banner</div>
-          </div>
-          <button class="toggle off" data-pref="demoOffline" aria-label="Demo offline toggle"></button>
-        </div>
       </div>
     </div>
 
@@ -252,10 +255,10 @@
       <div class="settings-card">
         <div class="settings-row">
           <span class="lbl">Version</span>
-          <span class="val">0.1.0 · static prototype</span>
+          <span class="val">1.0.0</span>
         </div>
         <button class="settings-row" data-action="reset-data">
-          <span class="val danger">Reset demo data</span>
+          <span class="val danger">Reset all data</span>
           <span class="chev">›</span>
         </button>
       </div>
@@ -397,6 +400,12 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-mark">H</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>
 <script>
   if ('serviceWorker' in navigator) {
