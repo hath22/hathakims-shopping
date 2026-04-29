@@ -6,7 +6,7 @@
 (() => {
 'use strict';
 
-const BUILD = '29 Apr 2026 06:29 UTC';
+const BUILD = '29 Apr 2026 07:20 UTC';
 
 // ---------- Supabase ----------
 const SUPABASE_URL = 'https://cviqjcdhnsvcdodxmddo.supabase.co';

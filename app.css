@@ -281,7 +281,7 @@ input, textarea { font: inherit; -webkit-appearance: none; }
 /* ========== Bottom action bar ========== */
 .fab-bar {
   position: fixed; left: 0; right: 0;
-  bottom: 60px;
+  bottom: 72px;
   max-width: 480px; margin: 0 auto;
   padding: 14px 20px calc(14px + var(--safe-bot));
   background: transparent;
