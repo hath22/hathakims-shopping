@@ -354,40 +354,96 @@ function back() {
   else showScreen('shopping', false);
 }
 
-// ---------- Mock scraper ----------
-const SAMPLE_PRODUCTS = [
-  { keys:['olive','oil'],       name:'Cobram Light Olive Oil',     package:'750mL',      emoji:'🫒', category:'Pantry'  },
-  { keys:['banana'],            name:'Bananas',                    package:'Bunch of 6', emoji:'🍌', category:'Produce' },
-  { keys:['milk'],              name:'Pauls Smarter White Milk',   package:'2L',         emoji:'🥛', category:'Dairy'   },
-  { keys:['bread','sourdough'], name:'Sourdough loaf',             package:'Each',       emoji:'🍞', category:'Bakery'  },
-  { keys:['salmon'],            name:'Tasmanian Salmon Fillet',    package:'Each',       emoji:'🐟', category:'Seafood' },
-  { keys:['avocado'],           name:'Avocados',                   package:'Each',       emoji:'🥑', category:'Produce' },
-  { keys:['chicken'],           name:'Free range chicken breast',  package:'500 g',      emoji:'🍗', category:'Meat'    },
-  { keys:['cheese','cheddar'],  name:'Aged cheddar',               package:'250 g',      emoji:'🧀', category:'Dairy'   },
-  { keys:['pasta','spaghetti'], name:'Spaghetti',                  package:'500 g',      emoji:'🍝', category:'Pantry'  },
-  { keys:['rice','jasmine'],    name:'Jasmine rice',               package:'1 kg',       emoji:'🍚', category:'Pantry'  },
-  { keys:['tomato'],            name:'Roma tomatoes',              package:'Each',       emoji:'🍅', category:'Produce' },
-  { keys:['biscuit','tim'],     name:'Tim Tams Original',          package:'200 g',      emoji:'🍪', category:'Pantry'  },
+// ---------- URL product parser ----------
+const EMOJI_MAP = [
+  { keys:['tomato'],                           emoji:'🍅', category:'Produce' },
+  { keys:['banana'],                           emoji:'🍌', category:'Produce' },
+  { keys:['avocado'],                          emoji:'🥑', category:'Produce' },
+  { keys:['spinach','kale','lettuce','salad'], emoji:'🥬', category:'Produce' },
+  { keys:['broccoli'],                         emoji:'🥦', category:'Produce' },
+  { keys:['carrot'],                           emoji:'🥕', category:'Produce' },
+  { keys:['mushroom'],                         emoji:'🍄', category:'Produce' },
+  { keys:['lemon','lime'],                     emoji:'🍋', category:'Produce' },
+  { keys:['apple'],                            emoji:'🍎', category:'Produce' },
+  { keys:['strawberr','berry','berries'],      emoji:'🍓', category:'Produce' },
+  { keys:['grape'],                            emoji:'🍇', category:'Produce' },
+  { keys:['onion','garlic'],                   emoji:'🧅', category:'Produce' },
+  { keys:['potato'],                           emoji:'🥔', category:'Produce' },
+  { keys:['milk','cream','yoghurt','yogurt'],  emoji:'🥛', category:'Dairy'   },
+  { keys:['cheese','cheddar','brie','feta'],   emoji:'🧀', category:'Dairy'   },
+  { keys:['butter','margarine'],               emoji:'🧈', category:'Dairy'   },
+  { keys:['egg'],                              emoji:'🥚', category:'Dairy'   },
+  { keys:['chicken','poultry'],                emoji:'🍗', category:'Meat'    },
+  { keys:['beef','mince','steak'],             emoji:'🥩', category:'Meat'    },
+  { keys:['pork','bacon','ham','prosciutto'],  emoji:'🥓', category:'Meat'    },
+  { keys:['lamb'],                             emoji:'🍖', category:'Meat'    },
+  { keys:['salmon','tuna','fish','prawn','seafood'], emoji:'🐟', category:'Seafood' },
+  { keys:['bread','sourdough','loaf','roll'],  emoji:'🍞', category:'Bakery'  },
+  { keys:['pasta','spaghetti','penne','fett'], emoji:'🍝', category:'Pantry'  },
+  { keys:['rice'],                             emoji:'🍚', category:'Pantry'  },
+  { keys:['olive','oil'],                      emoji:'🫒', category:'Pantry'  },
+  { keys:['sauce','paste','passata'],          emoji:'🫙', category:'Pantry'  },
+  { keys:['coffee'],                           emoji:'☕', category:'Pantry'  },
+  { keys:['tea'],                              emoji:'🍵', category:'Pantry'  },
+  { keys:['chocolate','tim tam','biscuit','cookie','cake'], emoji:'🍪', category:'Pantry' },
+  { keys:['chip','crisp','snack'],             emoji:'🥔', category:'Pantry'  },
+  { keys:['water','juice','drink','soda','cola'], emoji:'🧃', category:'Drinks' },
+  { keys:['wine','beer','spirit','vodka','gin'], emoji:'🍷', category:'Drinks' },
+  { keys:['soap','shampoo','conditioner','deodorant'], emoji:'🧴', category:'Personal' },
+  { keys:['toilet','tissue','paper'],          emoji:'🧻', category:'Household' },
+  { keys:['detergent','cleaner','wash'],       emoji:'🧹', category:'Household' },
 ];
+
+function guessEmojiAndCategory(name) {
+  const n = name.toLowerCase();
+  for (const row of EMOJI_MAP) {
+    if (row.keys.some(k => n.includes(k))) return { emoji: row.emoji, category: row.category };
+  }
+  return { emoji: '🛒', category: 'Other' };
+}
+
+function toTitleCase(str) {
+  const LOWER = new Set(['a','an','the','and','but','or','for','nor','on','at','to','by','in','of','up','as','is']);
+  return str.split(' ')
+    .map((w, i) => (i === 0 || !LOWER.has(w)) ? w.charAt(0).toUpperCase() + w.slice(1) : w)
+    .join(' ');
+}
+
+function parseProductFromSlug(slug) {
+  // Remove store brand prefix (coles-, woolworths-, woolies-, aldi-)
+  let s = slug.replace(/^(coles|woolworths?|woolies|aldi)-/i, '');
+  // Remove trailing numeric product ID
+  s = s.replace(/-\d{4,}$/, '');
+  // Replace hyphens with spaces
+  s = s.replace(/-/g, ' ').trim();
+  // Extract package weight/volume/count at the end
+  const pkgRe = /\b(\d+\.?\d*\s*(kg|g|ml|l|lt|pk|pack|pcs|sheets?|rolls?|count|x\s*\d+))\s*$/i;
+  const pkgMatch = s.match(pkgRe);
+  const pkg = pkgMatch ? pkgMatch[0].trim() : 'Each';
+  const name = toTitleCase(s.replace(pkgRe, '').trim());
+  return { name: name || toTitleCase(s), package: pkg };
+}
+
 function mockScrape(url) {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
-      let store = null, h = '';
+      let store = null;
       try {
         const u = new URL(url);
-        h = u.hostname.replace(/^www\./,'');
+        const h = u.hostname.replace(/^www\./, '');
         if (h.includes('coles.com.au'))           store = 'coles';
         else if (h.includes('woolworths.com.au')) store = 'woolies';
         else if (h.includes('aldi.com.au'))       store = 'aldi';
-      } catch {}
-      if (!store) return reject(new Error('Only Coles, Woolies, and Aldi URLs are supported.'));
-      if (/fail|404/i.test(url)) return reject(new Error("Couldn't read that page."));
-      const path = (() => { try { return new URL(url).pathname.toLowerCase(); } catch { return ''; }})();
-      const match = SAMPLE_PRODUCTS.find(s => s.keys.some(k => path.includes(k))) || {
-        name: 'Sample product', package: 'Each', emoji: '🛒', category: 'Pantry',
-      };
-      resolve({ ...match, store, sourceUrl: url, scrapeFailed: false });
-    }, 700);
+        if (!store) return reject(new Error('Only Coles, Woolies, and Aldi URLs are supported.'));
+        const segments = u.pathname.split('/').filter(Boolean);
+        const slug = segments[segments.length - 1] || '';
+        const { name, package: pkg } = parseProductFromSlug(slug);
+        const { emoji, category } = guessEmojiAndCategory(name);
+        resolve({ name, package: pkg, emoji, category, store, sourceUrl: url, scrapeFailed: false });
+      } catch {
+        reject(new Error('Could not read that URL.'));
+      }
+    }, 400);
   });
 }
 
@@ -1138,7 +1194,6 @@ function bind() {
   $('#urlAddBtn').addEventListener('click', urlAddCommit);
   $('#pastSearch').addEventListener('input', (e) => { ui.pastSearch = e.target.value; renderPastList(); });
   $('#quickAddBtn').addEventListener('click', quickAddCommit);
-  $('#formEmoji').addEventListener('click', cycleFormEmoji);
   $('#formFrequent').addEventListener('click', () => { ui.formDraft && (ui.formDraft.frequent = !ui.formDraft.frequent); $('#formFrequent').classList.toggle('off'); });
   $('#deleteMealBtn').addEventListener('click', deleteMeal);
   $('#mealDeleteBtn').addEventListener('click', () => {
