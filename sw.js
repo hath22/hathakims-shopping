@@ -1,4 +1,4 @@
-const CACHE = 'hathakim-v10';
+const CACHE = 'hathakim-v11';
 const ASSETS = [
   './',
   './index.html',

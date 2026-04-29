@@ -6,6 +6,8 @@
 (() => {
 'use strict';
 
+const BUILD = '29 Apr 2026 06:15 UTC';
+
 // ---------- Supabase ----------
 const SUPABASE_URL = 'https://cviqjcdhnsvcdodxmddo.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_cDpGQ4EIHU_2q-BftQQOXA_X1JPCp32';
@@ -1141,6 +1143,8 @@ function addPickedIngredientsToList() {
 
 // ---------- Wire up events ----------
 function bind() {
+  const stamp = document.getElementById('buildStamp');
+  if (stamp) stamp.textContent = `Updated ${BUILD}`;
   document.addEventListener('click', (e) => {
     const t      = e.target;
     const action = t.closest('[data-action]')?.dataset.action;

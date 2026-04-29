@@ -1381,6 +1381,8 @@ div.lib-card:active { transform: scale(0.995); transition: transform 0.1s; }
 }
 
 /* Offline banner */
+#buildStamp { font-size: 10px; color: var(--mute-2); margin-bottom: 4px; }
+
 .offline-banner {
   background: var(--ink);
   color: var(--paper);
