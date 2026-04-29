@@ -6,7 +6,7 @@
 (() => {
 'use strict';
 
-const BUILD = '29 Apr 2026 06:25 UTC';
+const BUILD = '29 Apr 2026 06:29 UTC';
 
 // ---------- Supabase ----------
 const SUPABASE_URL = 'https://cviqjcdhnsvcdodxmddo.supabase.co';
@@ -568,12 +568,25 @@ function setDayMeal(key, mealId) {
 }
 
 // ---------- Tick delight ----------
-const TICK_COPY = ['Sorted', 'Got it', 'In the trolley', 'Grabbed', 'Picked up'];
+const TICK_COPY = ['Sorted', 'Got it', 'In the trolley', 'Grabbed', 'Picked up', 'Yep', 'Lovely', 'Nice', 'Done', 'Tick', 'In the basket'];
+const STREAK_COPY = ['On a roll', 'Cruising', 'Smashing through', 'In the zone'];
 let lastTickIdx = -1;
+let recentTicks = [];   // timestamps of last few ticks for streak detection
 function showTickToast() {
   const total = state.list.length;
   const willBeDone = state.list.filter(x => !x.ticked).length;
   if (willBeDone <= 1) return;
+
+  // Streak: 3+ ticks within 6 seconds occasionally surfaces a different message
+  const now = Date.now();
+  recentTicks = recentTicks.filter(t => now - t < 6000);
+  recentTicks.push(now);
+  if (recentTicks.length >= 3 && Math.random() < 0.6) {
+    toast(STREAK_COPY[Math.floor(Math.random() * STREAK_COPY.length)], 1300);
+    recentTicks = []; // reset so it doesn't fire every tick after
+    return;
+  }
+
   if (total > 3 && willBeDone === Math.ceil(total / 2)) { toast('Halfway through the list', 1600); return; }
   let idx;
   do { idx = Math.floor(Math.random() * TICK_COPY.length); }
@@ -582,8 +595,18 @@ function showTickToast() {
   toast(TICK_COPY[idx], 1100);
 }
 
+function allDoneMessage() {
+  const h = new Date().getHours();
+  if (h < 5)  return 'Done. Get some sleep, you legend.';
+  if (h < 11) return 'Done. Time for a coffee.';
+  if (h < 14) return 'Sorted. Lunch sorted too?';
+  if (h < 17) return 'All done. Lovely afternoon for it.';
+  if (h < 21) return 'Done. Time for tea.';
+  return 'Done. Cosy evening earned.';
+}
+
 function celebrateAllDone() {
-  toast('Nice work, you two', 2200);
+  toast(allDoneMessage(), 2400);
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const appEl = document.getElementById('app');
   if (!appEl) return;
