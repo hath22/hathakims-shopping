@@ -6,7 +6,7 @@
 (() => {
 'use strict';
 
-const BUILD = '29 Apr 2026 06:15 UTC';
+const BUILD = '29 Apr 2026 06:25 UTC';
 
 // ---------- Supabase ----------
 const SUPABASE_URL = 'https://cviqjcdhnsvcdodxmddo.supabase.co';
@@ -298,7 +298,24 @@ function imgCacheSet(name, url) {
     localStorage.setItem(IMG_CACHE_KEY, JSON.stringify(c));
   } catch {}
 }
-async function fetchProductImage(name) {
+function colesImageFromUrl(sourceUrl) {
+  // Extract trailing numeric product ID from a Coles URL and build the CDN path.
+  // Pattern: https://shop.coles.com.au/wcsstore/Coles-CAS/images/{d1}/{d2}/{d3}/{id}-th.jpg
+  if (!sourceUrl || !sourceUrl.includes('coles.com.au')) return null;
+  const m = sourceUrl.match(/-(\d{4,})(?:[/?#]|$)/);
+  if (!m) return null;
+  const id = m[1];
+  const [d1, d2, d3] = id;
+  return `https://shop.coles.com.au/wcsstore/Coles-CAS/images/${d1}/${d2}/${d3}/${id}-th.jpg`;
+}
+
+async function fetchProductImage(product) {
+  // Coles: derive image directly from product ID (exact match, no search).
+  const direct = colesImageFromUrl(product.sourceUrl);
+  if (direct) return direct;
+
+  // Fall back to Woolworths search by name.
+  const name = product.name;
   const cached = imgCacheGet(name);
   if (cached !== undefined) return cached;
   try {
@@ -318,11 +335,11 @@ async function loadShoppingImages() {
   for (const thumb of thumbs) {
     const product = state.products.find(p => p.id === thumb.dataset.productId);
     if (!product) continue;
-    const imgUrl = await fetchProductImage(product.name);
+    const imgUrl = await fetchProductImage(product);
     if (!document.contains(thumb)) continue;
     if (!imgUrl) continue;
     thumb.classList.add('has-img');
-    thumb.innerHTML = `<img src="${escapeHTML(imgUrl)}" alt="">`;
+    thumb.innerHTML = `<img src="${escapeHTML(imgUrl)}" alt="" onerror="this.parentElement.classList.remove('has-img');this.remove();">`;
     await new Promise(r => setTimeout(r, 40));
   }
 }
@@ -993,7 +1010,7 @@ function renderPastList() {
       ? `Last bought ${Math.round((Date.now()-p.lastBuyDate)/86400000)} days ago${p.lastBuyQty?` · qty ${p.lastBuyQty}`:''}`
       : 'Not bought yet';
     if (isSel) {
-      return `<div class="past-expanded"><div class="top"><div class="pt ${thumbColor(p.id)}">${p.emoji}</div><div class="pbody"><div class="pname">${escapeHTML(p.name)}</div><div class="pmeta">${escapeHTML(p.package)}${p.store?` · <span class="store ${p.store}">${storeLabel(p.store)}</span>`:''}</div><div class="lastbuy">${lastBuy}</div></div></div><div class="qty-row"><div class="qty-stepper"><button data-action="qty-dec">−</button><span class="num" id="pastQtyNum">${ui.pastQty}</span><button data-action="qty-inc">+</button></div><div class="note-pill-input"><span class="lbl">Note for this shop</span><input id="pastNote" placeholder="—" value="${escapeHTML(ui.pastNote)}"/></div></div><button class="add-mini" data-action="past-commit">Add to list</button></div>`;
+      return `<div class="past-expanded"><div class="top"><div class="pt ${thumbColor(p.id)}">${p.emoji}</div><div class="pbody"><div class="pname">${escapeHTML(p.name)}</div><div class="pmeta">${escapeHTML(p.package)}${p.store?` · <span class="store ${p.store}">${storeLabel(p.store)}</span>`:''}</div><div class="lastbuy">${lastBuy}</div></div><button class="past-delete" data-action="past-delete" data-id="${p.id}" aria-label="Delete product"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button></div><div class="qty-row"><div class="qty-stepper"><button data-action="qty-dec">−</button><span class="num" id="pastQtyNum">${ui.pastQty}</span><button data-action="qty-inc">+</button></div><div class="note-pill-input"><span class="lbl">Note for this shop</span><input id="pastNote" placeholder="—" value="${escapeHTML(ui.pastNote)}"/></div></div><button class="add-mini" data-action="past-commit">Add to list</button></div>`;
     }
     return `<button class="past-row" data-action="past-select" data-id="${p.id}"><div class="pt ${thumbColor(p.id)}">${p.emoji}</div><div class="pbody"><div class="pname">${escapeHTML(p.name)}</div><div class="pmeta">${escapeHTML(p.package)}${p.store?` · <span class="store ${p.store}">${storeLabel(p.store)}</span>`:''}</div></div><span class="qadd">+</span></button>`;
   }).join('');
@@ -1012,6 +1029,17 @@ function pastSelect(productId) {
   renderPastList();
 }
 function pastQtyDelta(d) { ui.pastQty = Math.max(1, ui.pastQty + d); $('#pastQtyNum').textContent = ui.pastQty; }
+function pastDelete(productId) {
+  const p = state.products.find(x => x.id === productId);
+  if (!p) return;
+  openConfirmSheet(`Delete "${p.name}"?`, "It won't appear in Past items again. Items currently on your shopping list will stay.", 'Delete product', true, () => {
+    state.products = state.products.filter(x => x.id !== productId);
+    sb.from('products').delete().eq('id', productId);
+    if (ui.pastSelectedId === productId) ui.pastSelectedId = null;
+    toast('Product deleted');
+    renderPastList();
+  });
+}
 function pastCommit() {
   const id = ui.pastSelectedId;
   if (!id) return;
@@ -1343,6 +1371,7 @@ function handleAction(action, el, ev) {
     case 'qty-dec':      pastQtyDelta(-1); break;
     case 'qty-inc':      pastQtyDelta(+1); break;
     case 'past-commit':  ui.pastNote = $('#pastNote').value || ''; pastCommit(); break;
+    case 'past-delete':  ev?.stopPropagation(); pastDelete(el.dataset.id); break;
     case 'signout':
       sb.auth.signOut();
       break;
