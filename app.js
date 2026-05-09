@@ -495,20 +495,20 @@ function addProduct(p) {
   if (existing) {
     Object.assign(existing, { name: p.name, package: p.package, store: p.store, emoji: p.emoji, category: p.category, scrapeFailed: false });
     sb.from('products').update({ name: p.name, package: p.package, store: p.store, emoji: p.emoji, category: p.category, scrape_failed: false }).eq('id', existing.id).then(()=>{}, console.error);
-    return existing;
+    return [existing, Promise.resolve()];
   }
   const id = genUUID();
   const np = { id, name: p.name, package: p.package || 'Each', store: p.store, emoji: p.emoji || '🛒', category: p.category || 'Other', sourceUrl: p.sourceUrl, lastBuyDate: null, lastBuyQty: null, scrapeFailed: false };
   state.products.push(np);
-  sb.from('products').insert({ id, household_id: householdId, ...productToRow(np) }).then(()=>{}, console.error);
-  return np;
+  const dbReady = sb.from('products').insert({ id, household_id: householdId, ...productToRow(np) }).then(()=>{}, console.error);
+  return [np, dbReady];
 }
 
-function addToList(productId, qty = 1, note = '') {
+function addToList(productId, qty = 1, note = '', productReady = Promise.resolve()) {
   const id = genUUID();
   const item = { id, productId, qty: Math.max(1, qty|0), note: note.trim(), ticked: false, addedBy: currentUser?.id, addedAt: Date.now() };
   state.list.push(item);
-  sb.from('shopping_items').insert({ id, household_id: householdId, product_id: productId, qty: item.qty, note: item.note || null, ticked: false, added_by: currentUser?.id }).then(()=>{}, console.error);
+  productReady.then(() => sb.from('shopping_items').insert({ id, household_id: householdId, product_id: productId, qty: item.qty, note: item.note || null, ticked: false, added_by: currentUser?.id }).then(()=>{}, console.error));
   const prod = state.products.find(x => x.id === productId);
   if (prod) {
     prod.lastBuyDate = Date.now(); prod.lastBuyQty = item.qty;
@@ -1003,10 +1003,10 @@ function onUrlInput() {
 function urlAddCommit() {
   if (!ui.urlScraped) return;
   const r       = ui.urlScraped;
-  const product = addProduct({ name: r.name, package: r.package, store: r.store, emoji: r.emoji, category: r.category, sourceUrl: r.sourceUrl });
+  const [product, productReady] = addProduct({ name: r.name, package: r.package, store: r.store, emoji: r.emoji, category: r.category, sourceUrl: r.sourceUrl });
   const qty     = parseInt($('#urlQty')?.value, 10) || 1;
   const note    = $('#urlNote')?.value || '';
-  addToList(product.id, qty, note);
+  addToList(product.id, qty, note, productReady);
   closeAdd(); showScreen('shopping', false);
   toast(`Added ${product.name}`);
 }
@@ -1015,8 +1015,8 @@ function quickAddCommit() {
   if (!name) { toast('Type a name first'); return; }
   const qty     = parseInt($('#quickQty').value, 10) || 1;
   const note    = $('#quickNote').value || '';
-  const product = addProduct({ name, package: 'Each', store: null, emoji: '🛒', category: 'Other', sourceUrl: null });
-  addToList(product.id, qty, note);
+  const [product, productReady] = addProduct({ name, package: 'Each', store: null, emoji: '🛒', category: 'Other', sourceUrl: null });
+  addToList(product.id, qty, note, productReady);
   closeAdd(); showScreen('shopping', false);
   toast(`Added ${name}`);
 }
@@ -1183,8 +1183,9 @@ function addPickedIngredientsToList() {
     const ing = m.ingredients[idx];
     if (!ing) continue;
     let p = state.products.find(x => x.name.toLowerCase() === ing.name.toLowerCase());
-    if (!p) p = addProduct({ name: ing.name, package: 'Each', store: null, emoji: emojiForIngredient(ing.name), category: 'Recipe', sourceUrl: null });
-    addToList(p.id, 1, ing.qty);
+    let productReady = Promise.resolve();
+    if (!p) [p, productReady] = addProduct({ name: ing.name, package: 'Each', store: null, emoji: emojiForIngredient(ing.name), category: 'Recipe', sourceUrl: null });
+    addToList(p.id, 1, ing.qty, productReady);
     n++;
   }
   ui.pickedIngredients = new Set();
