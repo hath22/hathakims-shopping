@@ -494,13 +494,13 @@ function addProduct(p) {
   const existing = state.products.find(x => x.sourceUrl && p.sourceUrl && x.sourceUrl === p.sourceUrl);
   if (existing) {
     Object.assign(existing, { name: p.name, package: p.package, store: p.store, emoji: p.emoji, category: p.category, scrapeFailed: false });
-    sb.from('products').update({ name: p.name, package: p.package, store: p.store, emoji: p.emoji, category: p.category, scrape_failed: false }).eq('id', existing.id);
+    sb.from('products').update({ name: p.name, package: p.package, store: p.store, emoji: p.emoji, category: p.category, scrape_failed: false }).eq('id', existing.id).then(()=>{}, console.error);
     return existing;
   }
   const id = genUUID();
   const np = { id, name: p.name, package: p.package || 'Each', store: p.store, emoji: p.emoji || '🛒', category: p.category || 'Other', sourceUrl: p.sourceUrl, lastBuyDate: null, lastBuyQty: null, scrapeFailed: false };
   state.products.push(np);
-  sb.from('products').insert({ id, household_id: householdId, ...productToRow(np) });
+  sb.from('products').insert({ id, household_id: householdId, ...productToRow(np) }).then(()=>{}, console.error);
   return np;
 }
 
@@ -508,11 +508,11 @@ function addToList(productId, qty = 1, note = '') {
   const id = genUUID();
   const item = { id, productId, qty: Math.max(1, qty|0), note: note.trim(), ticked: false, addedBy: currentUser?.id, addedAt: Date.now() };
   state.list.push(item);
-  sb.from('shopping_items').insert({ id, household_id: householdId, product_id: productId, qty: item.qty, note: item.note || null, ticked: false, added_by: currentUser?.id });
+  sb.from('shopping_items').insert({ id, household_id: householdId, product_id: productId, qty: item.qty, note: item.note || null, ticked: false, added_by: currentUser?.id }).then(()=>{}, console.error);
   const prod = state.products.find(x => x.id === productId);
   if (prod) {
     prod.lastBuyDate = Date.now(); prod.lastBuyQty = item.qty;
-    sb.from('products').update({ last_buy_date: new Date().toISOString(), last_buy_qty: item.qty }).eq('id', productId);
+    sb.from('products').update({ last_buy_date: new Date().toISOString(), last_buy_qty: item.qty }).eq('id', productId).then(()=>{}, console.error);
   }
   return item;
 }
@@ -522,7 +522,7 @@ function tickItem(itemId) {
   if (!it) return;
   it.ticked = !it.ticked;
   it.tickedAt = it.ticked ? Date.now() : null;
-  sb.from('shopping_items').update({ ticked: it.ticked, ticked_at: it.ticked ? new Date().toISOString() : null }).eq('id', itemId);
+  sb.from('shopping_items').update({ ticked: it.ticked, ticked_at: it.ticked ? new Date().toISOString() : null }).eq('id', itemId).then(()=>{}, console.error);
   if (it.ticked && state.list.length > 0 && state.list.every(x => x.ticked)) setTimeout(celebrateAllDone, 320);
 }
 
@@ -530,7 +530,7 @@ function clearTicked() {
   const ids = state.list.filter(x => x.ticked).map(x => x.id);
   if (!ids.length) return;
   state.list = state.list.filter(x => !x.ticked);
-  sb.from('shopping_items').delete().in('id', ids);
+  sb.from('shopping_items').delete().in('id', ids).then(()=>{}, console.error);
 }
 
 function getDayEntry(key) {
@@ -549,7 +549,7 @@ function setDayEntry(key, updates) {
     eating_out_note: merged.eatingOutNote || null,
     is_bendigo: merged.isBendigo || false,
     updated_at: new Date().toISOString(),
-  }, { onConflict: 'household_id,plan_date' });
+  }, { onConflict: 'household_id,plan_date' }).then(()=>{}, console.error);
 }
 function setDayMeal(key, mealId) {
   setDayEntry(key, { mealId, eatingOut: false, eatingOutNote: '' });
@@ -561,7 +561,7 @@ function setDayMeal(key, mealId) {
       const today = new Date(); today.setHours(0,0,0,0);
       if (dayDate <= today && (!m.lastMadeDate || dayDate.getTime() > m.lastMadeDate)) {
         m.lastMadeDate = dayDate.getTime();
-        sb.from('meals').update({ last_made_date: dayDate.toISOString() }).eq('id', mealId);
+        sb.from('meals').update({ last_made_date: dayDate.toISOString() }).eq('id', mealId).then(()=>{}, console.error);
       }
     }
   }
@@ -880,11 +880,11 @@ function commitMealForm() {
   if (d.id) {
     const idx = state.meals.findIndex(m => m.id === d.id);
     if (idx >= 0) state.meals[idx] = { ...d };
-    sb.from('meals').update(mealToRow(d)).eq('id', d.id);
+    sb.from('meals').update(mealToRow(d)).eq('id', d.id).then(()=>{}, console.error);
   } else {
     d.id = genUUID();
     state.meals.push({ ...d });
-    sb.from('meals').insert({ id: d.id, household_id: householdId, ...mealToRow(d) });
+    sb.from('meals').insert({ id: d.id, household_id: householdId, ...mealToRow(d) }).then(()=>{}, console.error);
   }
   toast(d.id ? 'Meal saved' : 'Meal created');
   ui.formDraft = null;
@@ -898,7 +898,7 @@ function deleteMeal() {
       if (state.week[k]?.mealId === d.id) setDayEntry(k, { mealId: null });
     });
     state.meals = state.meals.filter(m => m.id !== d.id);
-    sb.from('meals').delete().eq('id', d.id);
+    sb.from('meals').delete().eq('id', d.id).then(()=>{}, console.error);
     toast('Meal deleted');
     ui.formDraft = null;
     back();
@@ -1044,9 +1044,9 @@ function pastSelect(productId) {
   if (p && p.sourceUrl) {
     mockScrape(p.sourceUrl).then(r => {
       p.name = r.name; p.package = r.package; p.emoji = r.emoji; p.store = r.store; p.scrapeFailed = false;
-      sb.from('products').update({ name: r.name, package: r.package, emoji: r.emoji, store: r.store, scrape_failed: false }).eq('id', p.id);
+      sb.from('products').update({ name: r.name, package: r.package, emoji: r.emoji, store: r.store, scrape_failed: false }).eq('id', p.id).then(()=>{}, console.error);
       if (ui.sheetOpen && ui.addMode === 'past') renderPastList();
-    }).catch(() => { p.scrapeFailed = true; sb.from('products').update({ scrape_failed: true }).eq('id', p.id); });
+    }).catch(() => { p.scrapeFailed = true; sb.from('products').update({ scrape_failed: true }).eq('id', p.id).then(()=>{}, console.error); });
   }
   ui.pastSelectedId = productId; ui.pastQty = 1; ui.pastNote = '';
   renderPastList();
@@ -1057,7 +1057,7 @@ function pastDelete(productId) {
   if (!p) return;
   openConfirmSheet(`Delete "${p.name}"?`, "It won't appear in Past items again. Items currently on your shopping list will stay.", 'Delete product', true, () => {
     state.products = state.products.filter(x => x.id !== productId);
-    sb.from('products').delete().eq('id', productId);
+    sb.from('products').delete().eq('id', productId).then(()=>{}, console.error);
     if (ui.pastSelectedId === productId) ui.pastSelectedId = null;
     toast('Product deleted');
     renderPastList();
@@ -1259,7 +1259,7 @@ function bind() {
         if (state.week[k]?.mealId === m.id) setDayEntry(k, { mealId: null });
       });
       state.meals = state.meals.filter(x => x.id !== m.id);
-      sb.from('meals').delete().eq('id', m.id);
+      sb.from('meals').delete().eq('id', m.id).then(()=>{}, console.error);
       toast('Meal deleted');
       back();
     });
@@ -1268,7 +1268,7 @@ function bind() {
     const m = state.meals.find(x => x.id === ui.activeMealId);
     if (!m) return;
     m.frequent = !m.frequent;
-    sb.from('meals').update({ is_frequent: m.frequent }).eq('id', m.id);
+    sb.from('meals').update({ is_frequent: m.frequent }).eq('id', m.id).then(()=>{}, console.error);
     renderMealDetail();
     toast(m.frequent ? 'Pinned to frequent' : 'Removed from frequent');
   });
