@@ -1,6 +1,6 @@
 {
-  "name": "Hathakim's Pantry",
-  "short_name": "Pantry",
+  "name": "Hathakim's Planner",
+  "short_name": "Planner",
   "description": "Shared meal planner for the week",
   "start_url": ".",
   "scope": ".",

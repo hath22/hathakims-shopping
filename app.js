@@ -823,6 +823,8 @@ function renderMealDetail() {
 
 // ---------- Render: meal form ----------
 function startMealForm(mealId = null) {
+  ui.pickedIngredients = new Set();
+  ui._ingredientsForMeal = null;
   if (mealId) {
     const m = state.meals.find(x => x.id === mealId);
     if (!m) return;
