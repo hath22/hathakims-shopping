@@ -75,9 +75,6 @@
 
     <div id="shopList"></div>
 
-    <div class="fab-bar">
-      <button class="btn" data-action="open-add"><span class="plus">+</span> Add item</button>
-    </div>
   </section>
 
   <!-- ========== MEAL PLANNER ========== -->
@@ -108,9 +105,6 @@
       <button data-filter="quick">Quick (≤30 min)</button>
     </div>
     <div id="libList"></div>
-    <div class="fab-bar">
-      <button class="btn" data-action="new-meal"><span class="plus">+</span> New meal</button>
-    </div>
   </section>
 
   <!-- ========== MEAL DETAIL ========== -->
@@ -140,10 +134,6 @@
     </div>
     <div id="mealIngredients"></div>
 
-    <div class="fab-bar">
-      <button class="btn ghost" data-action="edit-meal">Edit meal</button>
-      <button class="btn terra" id="addToListBtn" data-action="add-ings-to-list">Add to shopping list</button>
-    </div>
   </section>
 
   <!-- ========== CREATE / EDIT MEAL ========== -->
@@ -266,6 +256,18 @@
       </div>
     </div>
   </section>
+
+  <!-- ========== FLOATING ACTION BARS ========== -->
+  <div class="fab-bar" id="fabShopping">
+    <button class="btn" data-action="open-add"><span class="plus">+</span> Add item</button>
+  </div>
+  <div class="fab-bar" id="fabRecipes">
+    <button class="btn" data-action="new-meal"><span class="plus">+</span> New meal</button>
+  </div>
+  <div class="fab-bar fab-detail" id="fabDetail">
+    <button class="btn ghost" data-action="edit-meal">Edit meal</button>
+    <button class="btn terra" id="addToListBtn" data-action="add-ings-to-list">Add to shopping list</button>
+  </div>
 
   <!-- ========== TAB BAR ========== -->
   <nav class="tabbar" id="tabbar">

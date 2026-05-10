@@ -6,7 +6,7 @@
 (() => {
 'use strict';
 
-const BUILD = '09 May 2026 10:00 AEST';
+const BUILD = '11 May 2026 00:00 AEST';
 
 // ---------- Supabase ----------
 const SUPABASE_URL = 'https://cviqjcdhnsvcdodxmddo.supabase.co';
@@ -365,6 +365,9 @@ function showScreen(name, addToHistory = true) {
   $$('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
   const screenEl = $(`.screen[data-screen="${name}"]`);
   if (screenEl) screenEl.scrollTop = 0;
+  $('#fabShopping').classList.toggle('visible', name === 'shopping');
+  $('#fabRecipes').classList.toggle('visible', name === 'recipes');
+  $('#fabDetail').classList.toggle('visible', name === 'meal-detail');
   render();
 }
 function back() {
@@ -949,8 +952,10 @@ function openConfirmSheet(title, body, confirmLabel, isDanger, onConfirm) {
 function closeConfirmSheet() {
   ui.confirmSheetOpen = false;
   confirmCallback     = null;
-  $('#scrim').classList.remove('open');
   $('#confirmSheet').classList.remove('open');
+  if (!ui.sheetOpen && !ui.daySheetOpen && !ui.priceSheetOpen) {
+    $('#scrim').classList.remove('open');
+  }
 }
 
 // ---------- Add sheet ----------
