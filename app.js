@@ -1396,6 +1396,18 @@ function handleAction(action, el, ev) {
     case 'qty-inc':      pastQtyDelta(+1); break;
     case 'past-commit':  ui.pastNote = $('#pastNote').value || ''; pastCommit(); break;
     case 'past-delete':  ev?.stopPropagation(); pastDelete(el.dataset.id); break;
+    case 'force-refresh':
+      (async () => {
+        toast('Clearing cache…');
+        try {
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(r => r.unregister()));
+        } catch {}
+        window.location.reload(true);
+      })();
+      break;
     case 'signout':
       sb.auth.signOut();
       break;
