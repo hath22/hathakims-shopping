@@ -6,7 +6,7 @@
 (() => {
 'use strict';
 
-const BUILD = '11 May 2026 17:30 AEST';
+const BUILD = '11 May 2026 17:45 AEST';
 
 // ---------- Supabase ----------
 const SUPABASE_URL = 'https://cviqjcdhnsvcdodxmddo.supabase.co';
@@ -1120,7 +1120,8 @@ function renderDaySheetBody() {
     html += `<div class="eating-out-note-wrap"><div class="input-row"><div class="v"><span class="lbl">Where / what</span><input id="eatingOutNote" placeholder="e.g. Thai place on Smith St" value="${escapeHTML(entry.eatingOutNote || '')}"/></div></div></div>`;
   }
   html += `<div class="day-sheet-divider"><span>or pick a meal</span></div>`;
-  state.meals.forEach(m => {
+  const sortedMeals = state.meals.slice().sort((a, b) => (b.frequent ? 1 : 0) - (a.frequent ? 1 : 0));
+  sortedMeals.forEach(m => {
     const isSel = !entry.eatingOut && entry.mealId === m.id;
     html += `<div class="day-meal-option${isSel ? ' selected' : ''}" data-action="day-pick-meal" data-meal-id="${m.id}"><div class="dm-body"><div class="dm-name">${escapeHTML(m.name)}</div><div class="dm-meta">${m.timeMin ? m.timeMin + ' min' : ''}${m.timeMin && host(m.recipeUrl) ? ' · ' : ''}${host(m.recipeUrl) ? escapeHTML(host(m.recipeUrl)) : ''}</div></div><div class="dm-check"></div></div>`;
   });
