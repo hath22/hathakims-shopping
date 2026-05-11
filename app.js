@@ -6,7 +6,7 @@
 (() => {
 'use strict';
 
-const BUILD = '11 May 2026 17:45 AEST';
+const BUILD = '11 May 2026 18:00 AEST';
 
 // ---------- Supabase ----------
 const SUPABASE_URL = 'https://cviqjcdhnsvcdodxmddo.supabase.co';
@@ -1425,7 +1425,8 @@ function handleAction(action, el, ev) {
           const regs = await navigator.serviceWorker.getRegistrations();
           await Promise.all(regs.map(r => r.unregister()));
         } catch {}
-        window.location.reload(true);
+        // Navigate to a timestamped URL so neither SW nor HTTP cache can serve stale files
+        window.location.href = window.location.pathname + '?v=' + Date.now();
       })();
       break;
     case 'signout':
