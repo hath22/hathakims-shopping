@@ -666,6 +666,30 @@ input, textarea { font: inherit; -webkit-appearance: none; }
   margin-top: 4px;
 }
 
+/* Special day picker in day sheet */
+.special-day-row {
+  padding: 10px 0 6px;
+}
+.special-day-row .tt {
+  font-size: 12px; font-weight: 600; color: var(--mute);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: 8px;
+}
+.special-day-pills {
+  display: flex; gap: 6px; flex-wrap: wrap;
+}
+.spill {
+  padding: 5px 12px; border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: transparent; color: var(--body);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer;
+}
+.spill.active {
+  background: var(--bendigo-bg); color: var(--bendigo-text);
+  border-color: var(--bendigo-text);
+}
+
 /* Day sheet extras */
 .day-sheet-toggle {
   margin: 0 0 0;

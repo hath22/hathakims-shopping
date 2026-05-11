@@ -363,12 +363,13 @@
       <h3 id="daySheetTitle">Monday, 7 April</h3>
       <button class="sheet-close" data-action="close-day-sheet" aria-label="Close">✕</button>
     </div>
-    <div class="toggle-row day-sheet-toggle" id="dayBendigoRow">
-      <div>
-        <div class="tt">Bendigo day</div>
-        <div class="ts">Mark this as a Bendigo trip day</div>
+    <div class="special-day-row" id="daySpecialRow">
+      <div class="tt">Special day</div>
+      <div class="special-day-pills" id="daySpecialPicker">
+        <button data-val="bendigo" class="spill">Bendigo day</button>
+        <button data-val="epworth" class="spill">Epworth evening</button>
+        <button data-val="hb" class="spill">HB night out</button>
       </div>
-      <button class="toggle off" id="dayBendigoToggle" aria-label="Toggle Bendigo day"></button>
     </div>
   </div>
   <div class="sheet-body" id="daySheetBody">

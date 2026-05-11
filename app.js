@@ -6,7 +6,7 @@
 (() => {
 'use strict';
 
-const BUILD = '11 May 2026 00:00 AEST';
+const BUILD = '11 May 2026 17:30 AEST';
 
 // ---------- Supabase ----------
 const SUPABASE_URL = 'https://cviqjcdhnsvcdodxmddo.supabase.co';
@@ -208,7 +208,7 @@ function planFromRow(r) {
     mealId:       r.meal_id,
     eatingOut:    r.eating_out,
     eatingOutNote: r.eating_out_note || '',
-    isBendigo:    r.is_bendigo,
+    specialDay:   r.special_day || null,
   };
 }
 
@@ -344,6 +344,7 @@ async function loadShoppingImages() {
   }
 }
 function storeLabel(s) { return { coles:'Coles', woolies:'Woolies', aldi:'Aldi' }[s] || ''; }
+function specialDayLabel(v) { return { bendigo:'Bendigo day', epworth:'Epworth evening', hb:'HB night out' }[v] || ''; }
 
 // ---------- Toast ----------
 let toastTimeout;
@@ -538,7 +539,7 @@ function clearTicked() {
 
 function getDayEntry(key) {
   const e = state.week[key];
-  if (!e || typeof e !== 'object') return { mealId: null, eatingOut: false, eatingOutNote: '', isBendigo: false };
+  if (!e || typeof e !== 'object') return { mealId: null, eatingOut: false, eatingOutNote: '', specialDay: null };
   return e;
 }
 function setDayEntry(key, updates) {
@@ -550,7 +551,7 @@ function setDayEntry(key, updates) {
     meal_id: merged.mealId || null,
     eating_out: merged.eatingOut || false,
     eating_out_note: merged.eatingOutNote || null,
-    is_bendigo: merged.isBendigo || false,
+    special_day: merged.specialDay || null,
     updated_at: new Date().toISOString(),
   }, { onConflict: 'household_id,plan_date' }).then(()=>{}, console.error);
 }
@@ -675,7 +676,8 @@ function renderShopping() {
       : '';
     const note      = item.note ? `<div class="note">📝 ${escapeHTML(item.note)}</div>` : '';
     const storeSpan = product.store ? `<span class="store ${product.store}">${storeLabel(product.store)}</span>` : '';
-    const meta      = `${qtyPrefix}${escapeHTML(product.package)}${storeSpan ? ' · ' + storeSpan : ''}`;
+    const pkgLabel  = product.package !== 'Each' || item.qty > 1 ? escapeHTML(product.package) : '';
+    const meta      = `${qtyPrefix}${pkgLabel}${pkgLabel && storeSpan ? ' · ' : ''}${storeSpan}`;
     return `<div class="card${item.ticked ? ' done' : ''}" data-item-id="${item.id}">
       <div class="thumb ${thumbColor(product.id)}" data-product-id="${product.id}">${product.emoji}</div>
       <div class="body">
@@ -728,19 +730,20 @@ function renderMeals() {
   const dayRowHtml = (d, isToday) => {
     const key   = ymd(d);
     const entry = getDayEntry(key);
-    const dateCap = `<div class="date-cap"><div class="dn">${DAYS_SHORT[d.getDay()]}</div><div class="dnum">${d.getDate()}</div>${entry.isBendigo ? '<div class="bendigo-dot"></div>' : ''}</div>`;
+    const sdLabel = specialDayLabel(entry.specialDay);
+    const dateCap = `<div class="date-cap"><div class="dn">${DAYS_SHORT[d.getDay()]}</div><div class="dnum">${d.getDate()}</div>${entry.specialDay ? '<div class="bendigo-dot"></div>' : ''}</div>`;
     if (entry.eatingOut) {
-      return `<button class="day-row eating-out${isToday ? ' today' : ''}" data-action="open-day" data-day="${key}">${dateCap}<div class="meal-info"><div class="meal-name">Eating out</div><div class="meal-meta">${escapeHTML(entry.eatingOutNote || 'Tap to add details')}</div>${entry.isBendigo ? '<span class="bendigo-pill">Bendigo</span>' : ''}</div><div class="chev">›</div></button>`;
+      return `<button class="day-row eating-out${isToday ? ' today' : ''}" data-action="open-day" data-day="${key}">${dateCap}<div class="meal-info"><div class="meal-name">Eating out</div><div class="meal-meta">${escapeHTML(entry.eatingOutNote || 'Tap to add details')}</div>${sdLabel ? `<span class="bendigo-pill">${sdLabel}</span>` : ''}</div><div class="chev">›</div></button>`;
     }
     const meal = entry.mealId && state.meals.find(m => m.id === entry.mealId);
     if (!meal) {
-      return `<button class="day-row empty" data-action="open-day" data-day="${key}">${dateCap}<div class="empty-add"><span>+ Add dinner</span>${entry.isBendigo ? '<span class="bendigo-pill">Bendigo</span>' : ''}</div></button>`;
+      return `<button class="day-row empty" data-action="open-day" data-day="${key}">${dateCap}<div class="empty-add"><span>+ Add dinner</span>${sdLabel ? `<span class="bendigo-pill">${sdLabel}</span>` : ''}</div></button>`;
     }
     const bits = [];
     if (meal.timeMin) bits.push(`${meal.timeMin} min`);
     if (host(meal.recipeUrl)) bits.push(host(meal.recipeUrl));
     const meta = bits.join(' · ') || ' ';
-    return `<button class="day-row${isToday ? ' today' : ''}" data-action="open-day" data-day="${key}">${dateCap}<div class="meal-info"><div class="meal-name">${escapeHTML(meal.name)}</div><div class="meal-meta">${escapeHTML(meta)}</div>${entry.isBendigo ? '<span class="bendigo-pill">Bendigo</span>' : ''}</div><div class="chev">›</div></button>`;
+    return `<button class="day-row${isToday ? ' today' : ''}" data-action="open-day" data-day="${key}">${dateCap}<div class="meal-info"><div class="meal-name">${escapeHTML(meal.name)}</div><div class="meal-meta">${escapeHTML(meta)}</div>${sdLabel ? `<span class="bendigo-pill">${sdLabel}</span>` : ''}</div><div class="chev">›</div></button>`;
   };
 
   const html = offsets.map(offset => {
@@ -1039,10 +1042,13 @@ function renderPastList() {
     const lastBuy = p.lastBuyDate
       ? `Last bought ${Math.round((Date.now()-p.lastBuyDate)/86400000)} days ago${p.lastBuyQty?` · qty ${p.lastBuyQty}`:''}`
       : 'Not bought yet';
+    const pkgMeta = p.package !== 'Each' ? escapeHTML(p.package) : '';
+    const storeMeta = p.store ? `<span class="store ${p.store}">${storeLabel(p.store)}</span>` : '';
+    const metaStr = [pkgMeta, storeMeta].filter(Boolean).join(' · ');
     if (isSel) {
-      return `<div class="past-expanded"><div class="top"><div class="pt ${thumbColor(p.id)}">${p.emoji}</div><div class="pbody"><div class="pname">${escapeHTML(p.name)}</div><div class="pmeta">${escapeHTML(p.package)}${p.store?` · <span class="store ${p.store}">${storeLabel(p.store)}</span>`:''}</div><div class="lastbuy">${lastBuy}</div></div><button class="past-delete" data-action="past-delete" data-id="${p.id}" aria-label="Delete product"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button></div><div class="qty-row"><div class="qty-stepper"><button data-action="qty-dec">−</button><span class="num" id="pastQtyNum">${ui.pastQty}</span><button data-action="qty-inc">+</button></div><div class="note-pill-input"><span class="lbl">Note for this shop</span><input id="pastNote" placeholder="—" value="${escapeHTML(ui.pastNote)}"/></div></div><button class="add-mini" data-action="past-commit">Add to list</button></div>`;
+      return `<div class="past-expanded"><div class="top"><div class="pbody"><div class="pname">${escapeHTML(p.name)}</div><div class="pmeta">${metaStr}</div><div class="lastbuy">${lastBuy}</div></div><button class="past-delete" data-action="past-delete" data-id="${p.id}" aria-label="Delete product"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></button></div><div class="qty-row"><div class="qty-stepper"><button data-action="qty-dec">−</button><span class="num" id="pastQtyNum">${ui.pastQty}</span><button data-action="qty-inc">+</button></div><div class="note-pill-input"><span class="lbl">Note for this shop</span><input id="pastNote" placeholder="—" value="${escapeHTML(ui.pastNote)}"/></div></div><button class="add-mini" data-action="past-commit">Add to list</button></div>`;
     }
-    return `<button class="past-row" data-action="past-select" data-id="${p.id}"><div class="pt ${thumbColor(p.id)}">${p.emoji}</div><div class="pbody"><div class="pname">${escapeHTML(p.name)}</div><div class="pmeta">${escapeHTML(p.package)}${p.store?` · <span class="store ${p.store}">${storeLabel(p.store)}</span>`:''}</div></div><span class="qadd">+</span></button>`;
+    return `<button class="past-row" data-action="past-select" data-id="${p.id}"><div class="pbody"><div class="pname">${escapeHTML(p.name)}</div><div class="pmeta">${metaStr}</div></div><span class="qadd">+</span></button>`;
   }).join('');
   $('#pastList').innerHTML = html || `<div class="empty-state" style="padding:20px 0;"><div class="empty-h" style="font-size:18px;">No past products</div><p class="empty-sub" style="font-size:13px;">Add a few items first.</p></div>`;
 }
@@ -1088,10 +1094,13 @@ function openDaySheet(dayKey) {
   ui.daySheetOpen = true;
   $('#daySheetTitle').textContent = longDateLabel(date);
   const entry = getDayEntry(dayKey);
-  $('#dayBendigoToggle').classList.toggle('off', !entry.isBendigo);
+  updateSpecialDayPicker(entry.specialDay);
   renderDaySheetBody();
   $('#scrim').classList.add('open');
   $('#daySheet').classList.add('open');
+}
+function updateSpecialDayPicker(val) {
+  $$('#daySpecialPicker [data-val]').forEach(b => b.classList.toggle('active', b.dataset.val === (val || '')));
 }
 function closeDaySheet() {
   ui.daySheetOpen = false;
@@ -1257,6 +1266,7 @@ function bind() {
   $('#urlAddBtn').addEventListener('click', urlAddCommit);
   $('#pastSearch').addEventListener('input', (e) => { ui.pastSearch = e.target.value; renderPastList(); });
   $('#quickAddBtn').addEventListener('click', quickAddCommit);
+  $('#quickName').addEventListener('keydown', e => { if (e.key === 'Enter') quickAddCommit(); });
   $('#formFrequent').addEventListener('click', () => { ui.formDraft && (ui.formDraft.frequent = !ui.formDraft.frequent); $('#formFrequent').classList.toggle('off'); });
   $('#deleteMealBtn').addEventListener('click', deleteMeal);
   $('#mealDeleteBtn').addEventListener('click', () => {
@@ -1287,12 +1297,14 @@ function bind() {
     else ui.pickedIngredients = new Set(m.ingredients.map((_,i)=>i));
     renderMealDetail();
   });
-  $('#dayBendigoToggle').addEventListener('click', () => {
-    if (!ui.dayTarget) return;
+  $('#daySpecialPicker').addEventListener('click', e => {
+    const btn = e.target.closest('[data-val]');
+    if (!btn || !ui.dayTarget) return;
     const { key } = ui.dayTarget;
-    const entry   = getDayEntry(key);
-    setDayEntry(key, { isBendigo: !entry.isBendigo });
-    $('#dayBendigoToggle').classList.toggle('off', !getDayEntry(key).isBendigo);
+    const entry = getDayEntry(key);
+    const newVal = btn.dataset.val === entry.specialDay ? null : btn.dataset.val || null;
+    setDayEntry(key, { specialDay: newVal });
+    updateSpecialDayPicker(getDayEntry(key).specialDay);
   });
   $$('[data-pref]').forEach(b => b.addEventListener('click', () => {
     const k = b.dataset.pref;
