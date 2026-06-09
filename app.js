@@ -6,7 +6,7 @@
 (() => {
 'use strict';
 
-const BUILD = '11 May 2026 18:00 AEST';
+const BUILD = '09 Jun 2026 AEST · recipe import';
 
 // ---------- Supabase ----------
 const SUPABASE_URL = 'https://cviqjcdhnsvcdodxmddo.supabase.co';
@@ -188,6 +188,8 @@ function mealFromRow(r) {
     timeMin:      r.time_min,
     lastMadeDate: r.last_made_date ? new Date(r.last_made_date).getTime() : null,
     ingredients:  r.ingredients || [],
+    recipe:       r.recipe || [],
+    servings:     r.servings || '',
   };
 }
 function mealToRow(m) {
@@ -201,6 +203,8 @@ function mealToRow(m) {
     time_min:       m.timeMin || null,
     last_made_date: m.lastMadeDate ? new Date(m.lastMadeDate).toISOString() : null,
     ingredients:    m.ingredients || [],
+    recipe:         m.recipe || [],
+    servings:       m.servings || null,
   };
 }
 function planFromRow(r) {
@@ -799,6 +803,7 @@ function renderMealDetail() {
   $('#mealTitle').textContent = m.name;
   const meta = [];
   if (m.timeMin) meta.push(`<span><b>${m.timeMin}</b> min</span>`);
+  if (m.servings) meta.push(`<span>${escapeHTML(m.servings)}</span>`);
   meta.push(`<span><b>${m.ingredients.length}</b> ingredients</span>`);
   if (m.frequent) meta.push(`<span><b>★ Frequent</b></span>`);
   $('#mealMeta').innerHTML = meta.join('');
@@ -820,6 +825,24 @@ function renderMealDetail() {
       <span class="nm">${escapeHTML(ing.name)}</span>
       <span class="ck"><svg viewBox="0 0 16 16" fill="none"><path d="M3 8.5l3 3 7-7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
     </button>`).join('');
+  const recipeEl = $('#mealRecipe');
+  const sections = Array.isArray(m.recipe) ? m.recipe : [];
+  const hasMethod = sections.some(s => s.items && s.items.length);
+  if (hasMethod) {
+    let stepNo = 0;
+    recipeEl.style.display = '';
+    recipeEl.innerHTML = `<div class="method-head">Method</div>` + sections.map(sec => {
+      const head = sec.name ? `<div class="method-section">${escapeHTML(sec.name)}</div>` : '';
+      const steps = (sec.items || []).map(step => {
+        stepNo++;
+        return `<li class="method-step"><span class="method-n">${stepNo}</span><span class="method-t">${escapeHTML(step)}</span></li>`;
+      }).join('');
+      return head + `<ol class="method-list">${steps}</ol>`;
+    }).join('');
+  } else {
+    recipeEl.style.display = 'none';
+    recipeEl.innerHTML = '';
+  }
   const picked = ui.pickedIngredients.size;
   const btn = $('#addToListBtn');
   btn.disabled = picked === 0;
@@ -836,7 +859,7 @@ function startMealForm(mealId = null) {
     if (!m) return;
     ui.formDraft = JSON.parse(JSON.stringify(m));
   } else {
-    ui.formDraft = { id: null, name: '', emoji: '🍽️', color: 'peach', frequent: false, notes: '', recipeUrl: '', timeMin: null, lastMadeDate: null, ingredients: [{qty:'', name:''}] };
+    ui.formDraft = { id: null, name: '', emoji: '🍽️', color: 'peach', frequent: false, notes: '', recipeUrl: '', timeMin: null, lastMadeDate: null, ingredients: [{qty:'', name:''}], recipe: [], servings: '' };
   }
   showScreen('meal-form');
 }
@@ -847,6 +870,132 @@ function cycleFormEmoji() {
   ui.formDraft.emoji = FORM_EMOJIS[(i + 1) % FORM_EMOJIS.length];
   $('#formEmojiCurrent').textContent = ui.formDraft.emoji;
 }
+// ---------- RecipeTin Eats import ----------
+// Decode HTML entities, strip tags, collapse whitespace
+function cleanRecipeText(s) {
+  return String(s ?? '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'")
+    .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ')
+    .replace(/\s+/g,' ').trim();
+}
+// ISO-8601 duration (e.g. "PT1H15M") → minutes
+function parseISODuration(d) {
+  if (typeof d !== 'string') return null;
+  const m = d.match(/^PT(?:(\d+)H)?(?:(\d+)M)?/);
+  if (!m) return null;
+  return ((parseInt(m[1]||0,10) * 60) + parseInt(m[2]||0,10)) || null;
+}
+function parseYield(y) {
+  if (Array.isArray(y)) y = y[0];
+  return cleanRecipeText(y != null ? String(y) : '');
+}
+// Normalise JSON-LD recipeInstructions into [{name, items:[...]}]
+function parseInstructions(raw) {
+  if (!raw) return [];
+  if (typeof raw === 'string') {
+    const items = raw.split(/\r?\n|<br\s*\/?>/i).map(cleanRecipeText).filter(Boolean);
+    return items.length ? [{ name: '', items }] : [];
+  }
+  if (!Array.isArray(raw)) raw = [raw];
+  const sections = [];
+  let buf = [];
+  const flush = () => { if (buf.length) { sections.push({ name: '', items: buf }); buf = []; } };
+  for (const node of raw) {
+    if (typeof node === 'string') { const t = cleanRecipeText(node); if (t) buf.push(t); continue; }
+    const type = node['@type'];
+    const isSection = type === 'HowToSection' || (Array.isArray(type) && type.includes('HowToSection'));
+    if (isSection) {
+      flush();
+      const items = (node.itemListElement || []).map(step =>
+        cleanRecipeText(typeof step === 'string' ? step : (step.text || step.name))
+      ).filter(Boolean);
+      if (items.length) sections.push({ name: cleanRecipeText(node.name || ''), items });
+    } else {
+      const t = cleanRecipeText(node.text || node.name); if (t) buf.push(t);
+    }
+  }
+  flush();
+  return sections;
+}
+function onFormUrlChange() {
+  const url = $('#formUrl').value.trim();
+  const btn = $('#fetchRecipeBtn');
+  if (btn) btn.style.display = url.includes('recipetineats.com') ? 'flex' : 'none';
+}
+async function fetchRecipeTinIngredients() {
+  const url = $('#formUrl').value.trim();
+  if (!url.includes('recipetineats.com')) return;
+  const btn = $('#fetchRecipeBtn');
+  const origContent = btn.innerHTML;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="13" height="13"><path d="M12 3v1m0 16v1M4.22 4.22l.7.7m14.14 14.14.7.7M3 12h1m16 0h1M4.22 19.78l.7-.7M18.36 5.64l.7-.7"/><circle cx="12" cy="12" r="4"/></svg> Fetching…';
+  btn.disabled = true;
+  try {
+    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const res = await fetch(proxyUrl, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`Proxy ${res.status}`);
+    const json = await res.json();
+    const html = json.contents || '';
+
+    // Pull all JSON-LD blocks, find the Recipe object
+    const ldRe = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+    let recipe = null, m;
+    while ((m = ldRe.exec(html)) !== null && !recipe) {
+      try {
+        const parsed = JSON.parse(m[1]);
+        const candidates = Array.isArray(parsed) ? parsed : [parsed];
+        for (const c of candidates) {
+          const t = c['@type'];
+          if (t === 'Recipe' || (Array.isArray(t) && t.includes('Recipe'))) { recipe = c; break; }
+          if (c['@graph']) {
+            for (const g of c['@graph']) {
+              const gt = g['@type'];
+              if (gt === 'Recipe' || (Array.isArray(gt) && gt.includes('Recipe'))) { recipe = g; break; }
+            }
+          }
+          if (recipe) break;
+        }
+      } catch {}
+    }
+
+    if (!recipe || !Array.isArray(recipe.recipeIngredient) || !recipe.recipeIngredient.length) {
+      toast("Couldn't find a recipe on that page.");
+      return;
+    }
+
+    const ings = recipe.recipeIngredient.map(raw => ({ qty: '', name: cleanRecipeText(raw) }));
+    const method = parseInstructions(recipe.recipeInstructions);
+    const servings = parseYield(recipe.recipeYield);
+    const timeMin = parseISODuration(recipe.totalTime)
+      || ((parseISODuration(recipe.prepTime) || 0) + (parseISODuration(recipe.cookTime) || 0)) || null;
+
+    if (!$('#formName').value.trim() && recipe.name) {
+      const cleanName = cleanRecipeText(recipe.name);
+      $('#formName').value = cleanName;
+      if (ui.formDraft) ui.formDraft.name = cleanName;
+    }
+
+    saveFormDraft();
+    if (ui.formDraft) {
+      ui.formDraft.ingredients = ings;
+      ui.formDraft.recipe = method;
+      ui.formDraft.servings = servings;
+      if (timeMin) ui.formDraft.timeMin = timeMin;
+      renderMealForm();
+      const steps = method.reduce((n, s) => n + s.items.length, 0);
+      toast(steps
+        ? `Imported ${ings.length} ingredient${ings.length !== 1 ? 's' : ''} · ${steps} step${steps !== 1 ? 's' : ''}`
+        : `${ings.length} ingredient${ings.length !== 1 ? 's' : ''} imported`);
+    }
+  } catch (e) {
+    console.error('Recipe fetch failed:', e);
+    toast("Couldn't fetch the recipe. Check your connection.");
+  } finally {
+    btn.innerHTML = origContent;
+    btn.disabled = false;
+  }
+}
+
 function renderMealForm() {
   const d = ui.formDraft;
   if (!d) return;
@@ -855,6 +1004,8 @@ function renderMealForm() {
   $('#formName').value  = d.name || '';
   $('#formNotes').value = d.notes || '';
   $('#formUrl').value   = d.recipeUrl || '';
+  const frbtn = $('#fetchRecipeBtn');
+  if (frbtn) frbtn.style.display = (d.recipeUrl || '').includes('recipetineats.com') ? 'flex' : 'none';
   $('#formFrequent').classList.toggle('off', !d.frequent);
   $('#formIngredients').innerHTML = d.ingredients.map((ing, idx) => `
     <div class="ing-edit-row" data-idx="${idx}">
@@ -1269,6 +1420,8 @@ function bind() {
   $('#quickAddBtn').addEventListener('click', quickAddCommit);
   $('#quickName').addEventListener('keydown', e => { if (e.key === 'Enter') quickAddCommit(); });
   $('#formFrequent').addEventListener('click', () => { ui.formDraft && (ui.formDraft.frequent = !ui.formDraft.frequent); $('#formFrequent').classList.toggle('off'); });
+  $('#formUrl').addEventListener('input', onFormUrlChange);
+  $('#fetchRecipeBtn').addEventListener('click', fetchRecipeTinIngredients);
   $('#deleteMealBtn').addEventListener('click', deleteMeal);
   $('#mealDeleteBtn').addEventListener('click', () => {
     const m = state.meals.find(x => x.id === ui.activeMealId);
