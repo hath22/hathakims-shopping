@@ -6,7 +6,7 @@
 (() => {
 'use strict';
 
-const BUILD = '09 Jun 2026 AEST · recipe import';
+const BUILD = '09 Jun 2026 AEST · recipe import v2';
 
 // ---------- Supabase ----------
 const SUPABASE_URL = 'https://cviqjcdhnsvcdodxmddo.supabase.co';
@@ -871,53 +871,9 @@ function cycleFormEmoji() {
   $('#formEmojiCurrent').textContent = ui.formDraft.emoji;
 }
 // ---------- RecipeTin Eats import ----------
-// Decode HTML entities, strip tags, collapse whitespace
-function cleanRecipeText(s) {
-  return String(s ?? '')
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&#39;/g,"'")
-    .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&nbsp;/g,' ')
-    .replace(/\s+/g,' ').trim();
-}
-// ISO-8601 duration (e.g. "PT1H15M") → minutes
-function parseISODuration(d) {
-  if (typeof d !== 'string') return null;
-  const m = d.match(/^PT(?:(\d+)H)?(?:(\d+)M)?/);
-  if (!m) return null;
-  return ((parseInt(m[1]||0,10) * 60) + parseInt(m[2]||0,10)) || null;
-}
-function parseYield(y) {
-  if (Array.isArray(y)) y = y[0];
-  return cleanRecipeText(y != null ? String(y) : '');
-}
-// Normalise JSON-LD recipeInstructions into [{name, items:[...]}]
-function parseInstructions(raw) {
-  if (!raw) return [];
-  if (typeof raw === 'string') {
-    const items = raw.split(/\r?\n|<br\s*\/?>/i).map(cleanRecipeText).filter(Boolean);
-    return items.length ? [{ name: '', items }] : [];
-  }
-  if (!Array.isArray(raw)) raw = [raw];
-  const sections = [];
-  let buf = [];
-  const flush = () => { if (buf.length) { sections.push({ name: '', items: buf }); buf = []; } };
-  for (const node of raw) {
-    if (typeof node === 'string') { const t = cleanRecipeText(node); if (t) buf.push(t); continue; }
-    const type = node['@type'];
-    const isSection = type === 'HowToSection' || (Array.isArray(type) && type.includes('HowToSection'));
-    if (isSection) {
-      flush();
-      const items = (node.itemListElement || []).map(step =>
-        cleanRecipeText(typeof step === 'string' ? step : (step.text || step.name))
-      ).filter(Boolean);
-      if (items.length) sections.push({ name: cleanRecipeText(node.name || ''), items });
-    } else {
-      const t = cleanRecipeText(node.text || node.name); if (t) buf.push(t);
-    }
-  }
-  flush();
-  return sections;
-}
+// The page is fetched and parsed server-side by the `import-recipe` edge
+// function (avoids browser CORS and flaky public proxies). It returns
+// { name, ingredients:[{qty,name}], recipe:[{name,items}], servings, timeMin }.
 function onFormUrlChange() {
   const url = $('#formUrl').value.trim();
   const btn = $('#fetchRecipeBtn');
@@ -931,65 +887,33 @@ async function fetchRecipeTinIngredients() {
   btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="13" height="13"><path d="M12 3v1m0 16v1M4.22 4.22l.7.7m14.14 14.14.7.7M3 12h1m16 0h1M4.22 19.78l.7-.7M18.36 5.64l.7-.7"/><circle cx="12" cy="12" r="4"/></svg> Fetching…';
   btn.disabled = true;
   try {
-    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-    const res = await fetch(proxyUrl, { cache: 'no-store' });
-    if (!res.ok) throw new Error(`Proxy ${res.status}`);
-    const json = await res.json();
-    const html = json.contents || '';
-
-    // Pull all JSON-LD blocks, find the Recipe object
-    const ldRe = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
-    let recipe = null, m;
-    while ((m = ldRe.exec(html)) !== null && !recipe) {
-      try {
-        const parsed = JSON.parse(m[1]);
-        const candidates = Array.isArray(parsed) ? parsed : [parsed];
-        for (const c of candidates) {
-          const t = c['@type'];
-          if (t === 'Recipe' || (Array.isArray(t) && t.includes('Recipe'))) { recipe = c; break; }
-          if (c['@graph']) {
-            for (const g of c['@graph']) {
-              const gt = g['@type'];
-              if (gt === 'Recipe' || (Array.isArray(gt) && gt.includes('Recipe'))) { recipe = g; break; }
-            }
-          }
-          if (recipe) break;
-        }
-      } catch {}
-    }
-
-    if (!recipe || !Array.isArray(recipe.recipeIngredient) || !recipe.recipeIngredient.length) {
-      toast("Couldn't find a recipe on that page.");
+    const { data, error } = await sb.functions.invoke('import-recipe', { body: { url } });
+    if (error) throw error;
+    if (!data || data.error || !Array.isArray(data.ingredients) || !data.ingredients.length) {
+      toast(data?.error || "Couldn't find a recipe on that page.");
       return;
     }
 
-    const ings = recipe.recipeIngredient.map(raw => ({ qty: '', name: cleanRecipeText(raw) }));
-    const method = parseInstructions(recipe.recipeInstructions);
-    const servings = parseYield(recipe.recipeYield);
-    const timeMin = parseISODuration(recipe.totalTime)
-      || ((parseISODuration(recipe.prepTime) || 0) + (parseISODuration(recipe.cookTime) || 0)) || null;
-
-    if (!$('#formName').value.trim() && recipe.name) {
-      const cleanName = cleanRecipeText(recipe.name);
-      $('#formName').value = cleanName;
-      if (ui.formDraft) ui.formDraft.name = cleanName;
+    if (!$('#formName').value.trim() && data.name) {
+      $('#formName').value = data.name;
+      if (ui.formDraft) ui.formDraft.name = data.name;
     }
 
     saveFormDraft();
     if (ui.formDraft) {
-      ui.formDraft.ingredients = ings;
-      ui.formDraft.recipe = method;
-      ui.formDraft.servings = servings;
-      if (timeMin) ui.formDraft.timeMin = timeMin;
+      ui.formDraft.ingredients = data.ingredients;
+      ui.formDraft.recipe = Array.isArray(data.recipe) ? data.recipe : [];
+      ui.formDraft.servings = data.servings || '';
+      if (data.timeMin) ui.formDraft.timeMin = data.timeMin;
       renderMealForm();
-      const steps = method.reduce((n, s) => n + s.items.length, 0);
+      const steps = ui.formDraft.recipe.reduce((n, s) => n + s.items.length, 0);
       toast(steps
-        ? `Imported ${ings.length} ingredient${ings.length !== 1 ? 's' : ''} · ${steps} step${steps !== 1 ? 's' : ''}`
-        : `${ings.length} ingredient${ings.length !== 1 ? 's' : ''} imported`);
+        ? `Imported ${data.ingredients.length} ingredient${data.ingredients.length !== 1 ? 's' : ''} · ${steps} step${steps !== 1 ? 's' : ''}`
+        : `${data.ingredients.length} ingredient${data.ingredients.length !== 1 ? 's' : ''} imported`);
     }
   } catch (e) {
-    console.error('Recipe fetch failed:', e);
-    toast("Couldn't fetch the recipe. Check your connection.");
+    console.error('Recipe import failed:', e);
+    toast("Couldn't fetch the recipe. Check your connection and try again.");
   } finally {
     btn.innerHTML = origContent;
     btn.disabled = false;
